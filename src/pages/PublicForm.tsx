@@ -70,6 +70,8 @@ const PublicForm = () => {
       answers,
       resume_url: resumeFile ? URL.createObjectURL(resumeFile) : undefined,
       notes: [],
+      history: [{ id: crypto.randomUUID(), action: 'Candidatura recebida', created_at: new Date().toISOString() }],
+      tests: [],
       created_at: new Date().toISOString(),
     });
     setSubmitted(true);

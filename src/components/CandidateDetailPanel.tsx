@@ -1,0 +1,264 @@
+import React, { useState } from 'react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { useAppState } from '@/contexts/AppContext';
+import { toast } from 'sonner';
+import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin } from 'lucide-react';
+import type { Candidate, CandidateStatus } from '@/types';
+import { ALL_STATUSES } from '@/types';
+import ScheduleInterviewModal from './ScheduleInterviewModal';
+import SendEmailModal from './SendEmailModal';
+import AssignTestModal from './AssignTestModal';
+
+interface Props {
+  candidate: Candidate | null;
+  onClose: () => void;
+}
+
+const statusColors: Record<CandidateStatus, string> = {
+  Novo: 'bg-primary',
+  Triado: 'bg-warning',
+  Entrevistado: 'bg-accent',
+  Teste: 'bg-secondary text-secondary-foreground',
+  Contratado: 'bg-success',
+  Rejeitado: 'bg-destructive',
+};
+
+const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
+  const { updateCandidateStatus, addCandidateNote, vagas } = useAppState();
+  const [newNote, setNewNote] = useState('');
+  const [showInterview, setShowInterview] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
+  const [showTest, setShowTest] = useState(false);
+
+  if (!candidate) return null;
+
+  const vaga = vagas.find(v => v.id === candidate.vaga_id);
+  const avgScore = candidate.ai_scores
+    ? Math.round(Object.values(candidate.ai_scores).reduce((a, b) => a + b, 0) / Object.values(candidate.ai_scores).length)
+    : null;
+
+  const handleStatusChange = (status: CandidateStatus) => {
+    updateCandidateStatus(candidate.id, status);
+    toast.success(`Status atualizado para "${status}"`);
+  };
+
+  const handleAddNote = () => {
+    if (!newNote.trim()) return;
+    addCandidateNote(candidate.id, newNote);
+    setNewNote('');
+    toast.success('Nota adicionada');
+  };
+
+  const handleReject = () => {
+    updateCandidateStatus(candidate.id, 'Rejeitado');
+    setShowEmail(true);
+    toast.success('Candidato rejeitado');
+  };
+
+  return (
+    <>
+      <Sheet open={!!candidate} onOpenChange={() => onClose()}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <SheetTitle className="text-xl">{candidate.name}</SheetTitle>
+                <p className="text-sm text-muted-foreground">{candidate.vaga_title}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className={statusColors[candidate.status]}>{candidate.status}</Badge>
+                {avgScore !== null && (
+                  <Badge variant="outline" className="font-mono">
+                    Score: {avgScore}%
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </SheetHeader>
+
+          {/* Quick Actions */}
+          <div className="flex flex-wrap gap-2 pb-4 border-b">
+            <Select value={candidate.status} onValueChange={v => handleStatusChange(v as CandidateStatus)}>
+              <SelectTrigger className="w-40 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="outline" onClick={() => setShowInterview(true)}>
+              <Calendar className="h-3 w-3" /> Agendar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowEmail(true)}>
+              <Mail className="h-3 w-3" /> E-mail
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowTest(true)}>
+              <ClipboardCheck className="h-3 w-3" /> Teste
+            </Button>
+            {candidate.status !== 'Rejeitado' && (
+              <Button size="sm" variant="outline" className="text-destructive" onClick={handleReject}>
+                <XCircle className="h-3 w-3" /> Rejeitar
+              </Button>
+            )}
+          </div>
+
+          <Tabs defaultValue="info" className="pt-4">
+            <TabsList className="w-full grid grid-cols-4 h-9">
+              <TabsTrigger value="info" className="text-xs"><User className="h-3 w-3 mr-1" />Info</TabsTrigger>
+              <TabsTrigger value="answers" className="text-xs"><FileText className="h-3 w-3 mr-1" />Respostas</TabsTrigger>
+              <TabsTrigger value="notes" className="text-xs"><MessageSquare className="h-3 w-3 mr-1" />Notas</TabsTrigger>
+              <TabsTrigger value="tests" className="text-xs"><ClipboardCheck className="h-3 w-3 mr-1" />Testes</TabsTrigger>
+            </TabsList>
+
+            {/* Info Tab */}
+            <TabsContent value="info" className="space-y-4 mt-4">
+              <div className="grid gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <a href={`mailto:${candidate.email}`} className="text-primary hover:underline">{candidate.email}</a>
+                </div>
+                {candidate.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">📱</span>
+                    <span>{candidate.phone}</span>
+                  </div>
+                )}
+                {candidate.linkedin && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Linkedin className="h-4 w-4 text-muted-foreground" />
+                    <a href={candidate.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      LinkedIn <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>Inscrito em {new Date(candidate.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
+
+              {/* Resume */}
+              {candidate.resume_url && (
+                <div className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium flex items-center gap-2"><FileText className="h-4 w-4" /> Currículo</span>
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={candidate.resume_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-3 w-3" /> Abrir
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* History */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Histórico</h4>
+                <div className="relative pl-4 space-y-3">
+                  <div className="absolute left-[7px] top-1 bottom-1 w-px bg-border" />
+                  {[...candidate.history].reverse().map(h => (
+                    <div key={h.id} className="relative">
+                      <div className="absolute -left-4 top-1.5 h-2 w-2 rounded-full bg-primary" />
+                      <p className="text-sm font-medium">{h.action}</p>
+                      {h.details && <p className="text-xs text-muted-foreground">{h.details}</p>}
+                      <p className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString('pt-BR')}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Answers Tab */}
+            <TabsContent value="answers" className="space-y-3 mt-4">
+              {vaga?.questions.map(q => {
+                const score = candidate.ai_scores?.[q.id];
+                return (
+                  <div key={q.id} className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-medium text-muted-foreground">{q.label}</p>
+                      {score !== undefined && (
+                        <Badge variant="outline" className="text-xs font-mono shrink-0">
+                          {score}%
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm">{candidate.answers[q.id] || '—'}</p>
+                    {score !== undefined && (
+                      <Progress value={score} className="h-1.5" />
+                    )}
+                  </div>
+                );
+              })}
+              {(!vaga || vaga.questions.length === 0) && (
+                <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma resposta registrada.</p>
+              )}
+            </TabsContent>
+
+            {/* Notes Tab */}
+            <TabsContent value="notes" className="space-y-3 mt-4">
+              <div className="flex gap-2">
+                <Textarea
+                  value={newNote}
+                  onChange={e => setNewNote(e.target.value)}
+                  placeholder="Adicionar uma nota..."
+                  rows={2}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddNote} disabled={!newNote.trim()} className="self-end">Adicionar</Button>
+              </div>
+              {candidate.notes.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma nota ainda.</p>
+              ) : (
+                [...candidate.notes].reverse().map((note, i) => (
+                  <div key={i} className="rounded-lg border bg-card p-3 text-sm">{note}</div>
+                ))
+              )}
+            </TabsContent>
+
+            {/* Tests Tab */}
+            <TabsContent value="tests" className="space-y-3 mt-4">
+              <Button size="sm" variant="outline" onClick={() => setShowTest(true)}>
+                <ClipboardCheck className="h-3 w-3" /> Atribuir Novo Teste
+              </Button>
+              {candidate.tests.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Nenhum teste atribuído.</p>
+              ) : (
+                candidate.tests.map(t => (
+                  <div key={t.id} className="rounded-lg border bg-card p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{t.test_name}</span>
+                      <Badge variant={t.status === 'Concluído' ? 'default' : 'secondary'}
+                        className={t.status === 'Concluído' ? 'bg-success' : ''}>
+                        {t.status}
+                      </Badge>
+                    </div>
+                    {t.score !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <Progress value={t.score} className="h-1.5 flex-1" />
+                        <span className="text-xs font-mono">{t.score}%</span>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Atribuído em {new Date(t.assigned_at).toLocaleDateString('pt-BR')}
+                      {t.completed_at && ` • Concluído em ${new Date(t.completed_at).toLocaleDateString('pt-BR')}`}
+                    </p>
+                  </div>
+                ))
+              )}
+            </TabsContent>
+          </Tabs>
+        </SheetContent>
+      </Sheet>
+
+      <ScheduleInterviewModal open={showInterview} onClose={() => setShowInterview(false)} candidateName={candidate.name} />
+      <SendEmailModal open={showEmail} onClose={() => setShowEmail(false)} candidateName={candidate.name} candidateEmail={candidate.email} />
+      <AssignTestModal open={showTest} onClose={() => setShowTest(false)} candidateId={candidate.id} candidateName={candidate.name} />
+    </>
+  );
+};
+
+export default CandidateDetailPanel;
