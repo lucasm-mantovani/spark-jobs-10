@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      candidates: {
+        Row: {
+          ai_scores: Json
+          answers: Json
+          created_at: string
+          email: string
+          history: Json
+          id: string
+          linkedin: string | null
+          name: string
+          notes: Json
+          phone: string | null
+          resume_url: string | null
+          status: string
+          tests: Json
+          vaga_id: string
+          vaga_title: string
+        }
+        Insert: {
+          ai_scores?: Json
+          answers?: Json
+          created_at?: string
+          email: string
+          history?: Json
+          id?: string
+          linkedin?: string | null
+          name: string
+          notes?: Json
+          phone?: string | null
+          resume_url?: string | null
+          status?: string
+          tests?: Json
+          vaga_id: string
+          vaga_title?: string
+        }
+        Update: {
+          ai_scores?: Json
+          answers?: Json
+          created_at?: string
+          email?: string
+          history?: Json
+          id?: string
+          linkedin?: string | null
+          name?: string
+          notes?: Json
+          phone?: string | null
+          resume_url?: string | null
+          status?: string
+          tests?: Json
+          vaga_id?: string
+          vaga_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_vaga_id_fkey"
+            columns: ["vaga_id"]
+            isOneToOne: false
+            referencedRelation: "vagas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           created_at: string
@@ -83,6 +145,48 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vagas: {
+        Row: {
+          behavioral_criteria: string
+          created_at: string
+          description: string
+          hiring_model: string
+          id: string
+          questions: Json
+          requirements: string
+          salary_max: number
+          salary_min: number
+          status: string
+          title: string
+        }
+        Insert: {
+          behavioral_criteria?: string
+          created_at?: string
+          description?: string
+          hiring_model?: string
+          id?: string
+          questions?: Json
+          requirements?: string
+          salary_max?: number
+          salary_min?: number
+          status?: string
+          title: string
+        }
+        Update: {
+          behavioral_criteria?: string
+          created_at?: string
+          description?: string
+          hiring_model?: string
+          id?: string
+          questions?: Json
+          requirements?: string
+          salary_max?: number
+          salary_min?: number
+          status?: string
+          title?: string
         }
         Relationships: []
       }
