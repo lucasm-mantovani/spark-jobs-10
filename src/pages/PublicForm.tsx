@@ -89,7 +89,7 @@ const PublicForm = () => {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('candidates').insert({
+      const payload = JSON.parse(JSON.stringify({
         name,
         email,
         phone: phone || null,
@@ -100,7 +100,8 @@ const PublicForm = () => {
         notes: [],
         history: [{ id: crypto.randomUUID(), action: 'Candidatura recebida', created_at: new Date().toISOString() }],
         tests: [],
-      });
+      }));
+      const { error } = await supabase.from('candidates').insert(payload as any);
 
       if (error) throw error;
       setSubmitted(true);
