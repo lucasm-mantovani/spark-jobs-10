@@ -90,9 +90,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [fetchData]);
 
   const addVaga = async (vaga: Omit<Vaga, 'id' | 'created_at'>): Promise<Vaga> => {
+    const payload = {
+      ...vaga,
+      questions: vaga.questions as unknown as Record<string, unknown>[],
+    };
     const { data, error } = await supabase
       .from('vagas')
-      .insert(vaga)
+      .insert(payload)
       .select()
       .single();
     if (error) throw error;
@@ -102,15 +106,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateVaga = async (id: string, updates: Partial<Vaga>): Promise<void> => {
-    const { error } = await supabase.from('vagas').update(updates).eq('id', id);
+    const payload: Record<string, unknown> = { ...updates };
+    if (payload.questions) payload.questions = JSON.parse(JSON.stringify(payload.questions));
+    const { error } = await supabase.from('vagas').update(payload as any).eq('id', id);
     if (error) throw error;
     setVagas(prev => prev.map(v => (v.id === id ? { ...v, ...updates } : v)));
   };
 
   const addCandidate = async (candidate: Omit<Candidate, 'id' | 'created_at'>): Promise<Candidate> => {
+    const payload = JSON.parse(JSON.stringify(candidate));
     const { data, error } = await supabase
       .from('candidates')
-      .insert(candidate)
+      .insert(payload)
       .select()
       .single();
     if (error) throw error;
@@ -132,7 +139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const { error } = await supabase
       .from('candidates')
-      .update({ status, history: updatedHistory })
+      .update({ status, history: JSON.parse(JSON.stringify(updatedHistory)) } as any)
       .eq('id', id);
     if (error) throw error;
 
@@ -156,7 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const { error } = await supabase
       .from('candidates')
-      .update({ notes: updatedNotes, history: updatedHistory })
+      .update({ notes: JSON.parse(JSON.stringify(updatedNotes)), history: JSON.parse(JSON.stringify(updatedHistory)) } as any)
       .eq('id', id);
     if (error) throw error;
 
@@ -174,7 +181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedHistory = [...candidate.history, entry];
     const { error } = await supabase
       .from('candidates')
-      .update({ history: updatedHistory })
+      .update({ history: JSON.parse(JSON.stringify(updatedHistory)) } as any)
       .eq('id', id);
     if (error) throw error;
 
@@ -184,7 +191,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateCandidate = async (id: string, updates: Partial<Candidate>): Promise<void> => {
-    const { error } = await supabase.from('candidates').update(updates).eq('id', id);
+    const payload = JSON.parse(JSON.stringify(updates));
+    const { error } = await supabase.from('candidates').update(payload as any).eq('id', id);
     if (error) throw error;
     setCandidates(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
   };
