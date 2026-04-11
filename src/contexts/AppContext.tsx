@@ -90,13 +90,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [fetchData]);
 
   const addVaga = async (vaga: Omit<Vaga, 'id' | 'created_at'>): Promise<Vaga> => {
-    const payload = {
-      ...vaga,
-      questions: vaga.questions as unknown as Record<string, unknown>[],
-    };
+    const payload = JSON.parse(JSON.stringify(vaga));
     const { data, error } = await supabase
       .from('vagas')
-      .insert(payload)
+      .insert(payload as any)
       .select()
       .single();
     if (error) throw error;
