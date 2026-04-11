@@ -65,26 +65,34 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
     setQuestions(prev => prev.filter(q => q.id !== id));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       toast.error('Título da vaga é obrigatório');
       return;
     }
     if (editVaga) {
-      updateVaga(editVaga.id, {
-        title, description, requirements, behavioral_criteria: behavioral,
-        hiring_model: hiringModel, salary_min: salaryMin, salary_max: salaryMax, questions,
-      });
-      toast.success('Vaga atualizada com sucesso!');
+      try {
+        await updateVaga(editVaga.id, {
+          title, description, requirements, behavioral_criteria: behavioral,
+          hiring_model: hiringModel, salary_min: salaryMin, salary_max: salaryMax, questions,
+        });
+        toast.success('Vaga atualizada com sucesso!');
+      } catch {
+        toast.error('Erro ao atualizar vaga. Tente novamente.');
+        return;
+      }
     } else {
-      const newVaga: Vaga = {
-        id: crypto.randomUUID(),
-        title, description, requirements, behavioral_criteria: behavioral,
-        hiring_model: hiringModel, salary_min: salaryMin, salary_max: salaryMax,
-        questions, status: 'active', created_at: new Date().toISOString(),
-      };
-      addVaga(newVaga);
-      toast.success('Vaga criada com sucesso!');
+      try {
+        await addVaga({
+          title, description, requirements, behavioral_criteria: behavioral,
+          hiring_model: hiringModel, salary_min: salaryMin, salary_max: salaryMax,
+          questions, status: 'active',
+        });
+        toast.success('Vaga criada com sucesso!');
+      } catch {
+        toast.error('Erro ao criar vaga. Tente novamente.');
+        return;
+      }
     }
     onClose();
   };

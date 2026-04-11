@@ -1,16 +1,19 @@
-import React, { createContext, useContext, useState } from 'react';
-import type { Vaga, Candidate, FormQuestion, CandidateStatus, HistoryEntry } from '@/types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { Vaga, Candidate, CandidateStatus, HistoryEntry } from '@/types';
 
 interface AppState {
   vagas: Vaga[];
   candidates: Candidate[];
-  addVaga: (vaga: Vaga) => void;
-  updateVaga: (id: string, updates: Partial<Vaga>) => void;
-  addCandidate: (candidate: Candidate) => void;
-  updateCandidateStatus: (id: string, status: CandidateStatus) => void;
-  addCandidateNote: (id: string, note: string) => void;
-  addCandidateHistory: (id: string, entry: HistoryEntry) => void;
-  updateCandidate: (id: string, updates: Partial<Candidate>) => void;
+  loading: boolean;
+  addVaga: (vaga: Omit<Vaga, 'id' | 'created_at'>) => Promise<Vaga>;
+  updateVaga: (id: string, updates: Partial<Vaga>) => Promise<void>;
+  addCandidate: (candidate: Omit<Candidate, 'id' | 'created_at'>) => Promise<Candidate>;
+  updateCandidateStatus: (id: string, status: CandidateStatus) => Promise<void>;
+  addCandidateNote: (id: string, note: string) => Promise<void>;
+  addCandidateHistory: (id: string, entry: HistoryEntry) => Promise<void>;
+  updateCandidate: (id: string, updates: Partial<Candidate>) => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -21,138 +24,187 @@ export const useAppState = () => {
   return ctx;
 };
 
-const sampleQuestions: FormQuestion[] = [
-  { id: 'q1', label: 'Por que você quer trabalhar nesta posição?', type: 'long_text', required: true },
-  { id: 'q2', label: 'Anos de experiência na área', type: 'short_text', required: true },
-  { id: 'q3', label: 'Nível de inglês', type: 'multiple_choice', options: ['Básico', 'Intermediário', 'Avançado', 'Fluente'], required: true },
-  { id: 'q4', label: 'Disponibilidade para início', type: 'short_text', required: true },
-];
+// Converte linha do banco para tipo Vaga
+function rowToVaga(row: Record<string, unknown>): Vaga {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    description: row.description as string,
+    requirements: row.requirements as string,
+    behavioral_criteria: row.behavioral_criteria as string,
+    hiring_model: row.hiring_model as Vaga['hiring_model'],
+    salary_min: row.salary_min as number,
+    salary_max: row.salary_max as number,
+    questions: (row.questions as Vaga['questions']) ?? [],
+    status: row.status as 'active' | 'inactive',
+    created_at: row.created_at as string,
+  };
+}
 
-const initialVagas: Vaga[] = [
-  {
-    id: 'demo-1',
-    title: 'Desenvolvedor Full Stack Senior',
-    description: 'Buscamos um desenvolvedor full stack para liderar projetos de tecnologia.',
-    requirements: 'React, Node.js, TypeScript, 5+ anos de experiência',
-    behavioral_criteria: 'Liderança, comunicação, trabalho em equipe',
-    hiring_model: 'CLT',
-    salary_min: 12000,
-    salary_max: 18000,
-    questions: sampleQuestions,
-    status: 'active',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'demo-2',
-    title: 'Designer UX/UI Pleno',
-    description: 'Procuramos designer para criar experiências digitais incríveis.',
-    requirements: 'Figma, Design System, 3+ anos de experiência',
-    behavioral_criteria: 'Criatividade, atenção ao detalhe, empatia',
-    hiring_model: 'PJ',
-    salary_min: 8000,
-    salary_max: 14000,
-    questions: [
-      { id: 'dq1', label: 'Link do seu portfólio', type: 'short_text', required: true },
-      { id: 'dq2', label: 'Descreva um projeto de UX que você lidera', type: 'long_text', required: true },
-    ],
-    status: 'active',
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-];
-
-const now = Date.now();
-const initialCandidates: Candidate[] = [
-  {
-    id: 'cand-1', name: 'Maria Silva', email: 'maria@email.com', phone: '(11) 99999-0001',
-    linkedin: 'https://linkedin.com/in/mariasilva',
-    vaga_id: 'demo-1', vaga_title: 'Desenvolvedor Full Stack Senior', status: 'Novo',
-    answers: { q1: 'Tenho paixão por tecnologia e quero crescer profissionalmente.', q2: '6', q3: 'Avançado', q4: 'Imediato' },
-    ai_scores: { q1: 85, q2: 90, q3: 95, q4: 100 },
-    notes: [], history: [{ id: 'h1', action: 'Candidatura recebida', created_at: new Date(now - 86400000 * 2).toISOString() }],
-    tests: [], created_at: new Date(now - 86400000 * 2).toISOString(),
-  },
-  {
-    id: 'cand-2', name: 'João Oliveira', email: 'joao@email.com', phone: '(11) 99999-0002',
-    vaga_id: 'demo-1', vaga_title: 'Desenvolvedor Full Stack Senior', status: 'Triado',
-    answers: { q1: 'Busco novos desafios profissionais e crescimento.', q2: '3', q3: 'Intermediário', q4: '2 semanas' },
-    ai_scores: { q1: 72, q2: 60, q3: 65, q4: 80 },
-    notes: ['Perfil interessante, agendar entrevista.'],
-    history: [
-      { id: 'h2', action: 'Candidatura recebida', created_at: new Date(now - 86400000 * 3).toISOString() },
-      { id: 'h3', action: 'Status alterado para Triado', details: 'Triado pelo recrutador', created_at: new Date(now - 86400000).toISOString() },
-    ],
-    tests: [], created_at: new Date(now - 86400000 * 3).toISOString(),
-  },
-  {
-    id: 'cand-3', name: 'Ana Costa', email: 'ana@email.com', phone: '(21) 98888-1234',
-    linkedin: 'https://linkedin.com/in/anacosta',
-    vaga_id: 'demo-1', vaga_title: 'Desenvolvedor Full Stack Senior', status: 'Entrevistado',
-    answers: { q1: 'Quero contribuir com minha experiência em projetos inovadores.', q2: '8', q3: 'Fluente', q4: 'Imediato' },
-    ai_scores: { q1: 92, q2: 95, q3: 100, q4: 100 },
-    notes: ['Excelente perfil técnico', 'Entrevista foi muito positiva'],
-    history: [
-      { id: 'h4', action: 'Candidatura recebida', created_at: new Date(now - 86400000 * 7).toISOString() },
-      { id: 'h5', action: 'Status alterado para Triado', created_at: new Date(now - 86400000 * 5).toISOString() },
-      { id: 'h6', action: 'Status alterado para Entrevistado', created_at: new Date(now - 86400000 * 2).toISOString() },
-    ],
-    tests: [{ id: 't1', test_name: 'Teste Técnico React', status: 'Concluído', score: 92, assigned_at: new Date(now - 86400000 * 3).toISOString(), completed_at: new Date(now - 86400000 * 2).toISOString() }],
-    created_at: new Date(now - 86400000 * 7).toISOString(),
-  },
-  {
-    id: 'cand-4', name: 'Pedro Santos', email: 'pedro@email.com',
-    vaga_id: 'demo-2', vaga_title: 'Designer UX/UI Pleno', status: 'Novo',
-    answers: { dq1: 'https://portfolio.pedro.com', dq2: 'Liderei o redesign do app principal da empresa, aumentando a retenção em 30%.' },
-    ai_scores: { dq1: 70, dq2: 88 },
-    notes: [], history: [{ id: 'h7', action: 'Candidatura recebida', created_at: new Date(now - 86400000).toISOString() }],
-    tests: [], created_at: new Date(now - 86400000).toISOString(),
-  },
-  {
-    id: 'cand-5', name: 'Carla Mendes', email: 'carla@email.com', phone: '(31) 97777-5555',
-    vaga_id: 'demo-1', vaga_title: 'Desenvolvedor Full Stack Senior', status: 'Teste',
-    answers: { q1: 'Tenho 10 anos de experiência e busco uma empresa inovadora.', q2: '10', q3: 'Fluente', q4: 'Imediato' },
-    ai_scores: { q1: 88, q2: 100, q3: 100, q4: 100 },
-    notes: ['Teste técnico atribuído'],
-    history: [
-      { id: 'h8', action: 'Candidatura recebida', created_at: new Date(now - 86400000 * 10).toISOString() },
-      { id: 'h9', action: 'Status alterado para Teste', created_at: new Date(now - 86400000 * 2).toISOString() },
-    ],
-    tests: [{ id: 't2', test_name: 'Teste Técnico Full Stack', status: 'Em Andamento', assigned_at: new Date(now - 86400000 * 2).toISOString() }],
-    created_at: new Date(now - 86400000 * 10).toISOString(),
-  },
-];
+// Converte linha do banco para tipo Candidate
+function rowToCandidate(row: Record<string, unknown>): Candidate {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    email: row.email as string,
+    phone: row.phone as string | undefined,
+    linkedin: row.linkedin as string | undefined,
+    vaga_id: row.vaga_id as string,
+    vaga_title: row.vaga_title as string,
+    status: row.status as CandidateStatus,
+    answers: (row.answers as Record<string, string>) ?? {},
+    ai_scores: (row.ai_scores as Record<string, number>) ?? {},
+    resume_url: row.resume_url as string | undefined,
+    notes: (row.notes as string[]) ?? [],
+    history: (row.history as HistoryEntry[]) ?? [],
+    tests: (row.tests as Candidate['tests']) ?? [],
+    created_at: row.created_at as string,
+  };
+}
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [vagas, setVagas] = useState<Vaga[]>(initialVagas);
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+  const [vagas, setVagas] = useState<Vaga[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addVaga = (vaga: Vaga) => setVagas(prev => [vaga, ...prev]);
-  const updateVaga = (id: string, updates: Partial<Vaga>) =>
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [vagasRes, candidatesRes] = await Promise.all([
+        supabase.from('vagas').select('*').order('created_at', { ascending: false }),
+        supabase.from('candidates').select('*').order('created_at', { ascending: false }),
+      ]);
+
+      if (vagasRes.error) throw vagasRes.error;
+      if (candidatesRes.error) throw candidatesRes.error;
+
+      setVagas((vagasRes.data ?? []).map(rowToVaga));
+      setCandidates((candidatesRes.data ?? []).map(rowToCandidate));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const addVaga = async (vaga: Omit<Vaga, 'id' | 'created_at'>): Promise<Vaga> => {
+    const { data, error } = await supabase
+      .from('vagas')
+      .insert(vaga)
+      .select()
+      .single();
+    if (error) throw error;
+    const novaVaga = rowToVaga(data);
+    setVagas(prev => [novaVaga, ...prev]);
+    return novaVaga;
+  };
+
+  const updateVaga = async (id: string, updates: Partial<Vaga>): Promise<void> => {
+    const { error } = await supabase.from('vagas').update(updates).eq('id', id);
+    if (error) throw error;
     setVagas(prev => prev.map(v => (v.id === id ? { ...v, ...updates } : v)));
+  };
 
-  const addCandidate = (candidate: Candidate) => setCandidates(prev => [candidate, ...prev]);
+  const addCandidate = async (candidate: Omit<Candidate, 'id' | 'created_at'>): Promise<Candidate> => {
+    const { data, error } = await supabase
+      .from('candidates')
+      .insert(candidate)
+      .select()
+      .single();
+    if (error) throw error;
+    const novoCandidate = rowToCandidate(data);
+    setCandidates(prev => [novoCandidate, ...prev]);
+    return novoCandidate;
+  };
 
-  const updateCandidateStatus = (id: string, status: CandidateStatus) =>
-    setCandidates(prev => prev.map(c => {
-      if (c.id !== id) return c;
-      const entry: HistoryEntry = { id: crypto.randomUUID(), action: `Status alterado para ${status}`, created_at: new Date().toISOString() };
-      return { ...c, status, history: [...c.history, entry] };
-    }));
+  const updateCandidateStatus = async (id: string, status: CandidateStatus): Promise<void> => {
+    const candidate = candidates.find(c => c.id === id);
+    if (!candidate) return;
 
-  const addCandidateNote = (id: string, note: string) =>
-    setCandidates(prev => prev.map(c => {
-      if (c.id !== id) return c;
-      const entry: HistoryEntry = { id: crypto.randomUUID(), action: 'Nota adicionada', details: note, created_at: new Date().toISOString() };
-      return { ...c, notes: [...c.notes, note], history: [...c.history, entry] };
-    }));
+    const newEntry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      action: `Status alterado para ${status}`,
+      created_at: new Date().toISOString(),
+    };
+    const updatedHistory = [...candidate.history, newEntry];
 
-  const addCandidateHistory = (id: string, entry: HistoryEntry) =>
-    setCandidates(prev => prev.map(c => (c.id === id ? { ...c, history: [...c.history, entry] } : c)));
+    const { error } = await supabase
+      .from('candidates')
+      .update({ status, history: updatedHistory })
+      .eq('id', id);
+    if (error) throw error;
 
-  const updateCandidate = (id: string, updates: Partial<Candidate>) =>
+    setCandidates(prev =>
+      prev.map(c => (c.id === id ? { ...c, status, history: updatedHistory } : c))
+    );
+  };
+
+  const addCandidateNote = async (id: string, note: string): Promise<void> => {
+    const candidate = candidates.find(c => c.id === id);
+    if (!candidate) return;
+
+    const newEntry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      action: 'Nota adicionada',
+      details: note,
+      created_at: new Date().toISOString(),
+    };
+    const updatedNotes = [...candidate.notes, note];
+    const updatedHistory = [...candidate.history, newEntry];
+
+    const { error } = await supabase
+      .from('candidates')
+      .update({ notes: updatedNotes, history: updatedHistory })
+      .eq('id', id);
+    if (error) throw error;
+
+    setCandidates(prev =>
+      prev.map(c =>
+        c.id === id ? { ...c, notes: updatedNotes, history: updatedHistory } : c
+      )
+    );
+  };
+
+  const addCandidateHistory = async (id: string, entry: HistoryEntry): Promise<void> => {
+    const candidate = candidates.find(c => c.id === id);
+    if (!candidate) return;
+
+    const updatedHistory = [...candidate.history, entry];
+    const { error } = await supabase
+      .from('candidates')
+      .update({ history: updatedHistory })
+      .eq('id', id);
+    if (error) throw error;
+
+    setCandidates(prev =>
+      prev.map(c => (c.id === id ? { ...c, history: updatedHistory } : c))
+    );
+  };
+
+  const updateCandidate = async (id: string, updates: Partial<Candidate>): Promise<void> => {
+    const { error } = await supabase.from('candidates').update(updates).eq('id', id);
+    if (error) throw error;
     setCandidates(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
+  };
 
   return (
-    <AppContext.Provider value={{ vagas, candidates, addVaga, updateVaga, addCandidate, updateCandidateStatus, addCandidateNote, addCandidateHistory, updateCandidate }}>
+    <AppContext.Provider
+      value={{
+        vagas,
+        candidates,
+        loading,
+        addVaga,
+        updateVaga,
+        addCandidate,
+        updateCandidateStatus,
+        addCandidateNote,
+        addCandidateHistory,
+        updateCandidate,
+        refreshData: fetchData,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

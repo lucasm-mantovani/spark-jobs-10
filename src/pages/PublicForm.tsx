@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useAppState } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,17 +9,42 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 import { CheckCircle2, Upload } from 'lucide-react';
+import type { Vaga } from '@/types';
 
 const PublicForm = () => {
   const { id } = useParams<{ id: string }>();
-  const { vagas, addCandidate } = useAppState();
-  const vaga = vagas.find(v => v.id === id);
+  const [vaga, setVaga] = useState<Vaga | null>(null);
+  const [loadingVaga, setLoadingVaga] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    supabase
+      .from('vagas')
+      .select('*')
+      .eq('id', id)
+      .single()
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setVaga(data as unknown as Vaga);
+        }
+        setLoadingVaga(false);
+      });
+  }, [id]);
+
+  if (loadingVaga) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
 
   if (!vaga) {
     return (
@@ -55,27 +80,36 @@ const PublicForm = () => {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
       toast.error('Nome e email são obrigatórios');
       return;
     }
-    addCandidate({
-      id: crypto.randomUUID(),
-      name, email, phone,
-      vaga_id: vaga.id,
-      vaga_title: vaga.title,
-      status: 'Novo',
-      answers,
-      resume_url: resumeFile ? URL.createObjectURL(resumeFile) : undefined,
-      notes: [],
-      history: [{ id: crypto.randomUUID(), action: 'Candidatura recebida', created_at: new Date().toISOString() }],
-      tests: [],
-      created_at: new Date().toISOString(),
-    });
-    setSubmitted(true);
-    toast.success('Candidatura enviada com sucesso!');
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('candidates').insert({
+        name,
+        email,
+        phone: phone || null,
+        vaga_id: vaga.id,
+        vaga_title: vaga.title,
+        status: 'Novo',
+        answers,
+        notes: [],
+        history: [{ id: crypto.randomUUID(), action: 'Candidatura recebida', created_at: new Date().toISOString() }],
+        tests: [],
+      });
+
+      if (error) throw error;
+      setSubmitted(true);
+      toast.success('Candidatura enviada com sucesso!');
+    } catch {
+      toast.error('Erro ao enviar candidatura. Tente novamente.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -190,8 +224,8 @@ const PublicForm = () => {
               </div>
             ))}
 
-            <Button type="submit" className="w-full" size="lg">
-              Enviar Candidatura
+            <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+              {submitting ? 'Enviando...' : 'Enviar Candidatura'}
             </Button>
           </form>
         </div>
