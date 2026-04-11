@@ -7,17 +7,38 @@ import CreateVagaModal from '@/components/CreateVagaModal';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Vaga } from '@/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const VagasPage = () => {
   const { vagas, updateVaga, candidates } = useAppState();
   const [createOpen, setCreateOpen] = useState(false);
   const [editVaga, setEditVaga] = useState<Vaga | undefined>();
+  const [confirmVaga, setConfirmVaga] = useState<Vaga | null>(null);
   const navigate = useNavigate();
 
   const toggleStatus = (vaga: Vaga) => {
-    const newStatus = vaga.status === 'active' ? 'inactive' : 'active';
-    updateVaga(vaga.id, { status: newStatus });
-    toast.success(`Vaga ${newStatus === 'active' ? 'ativada' : 'desativada'}`);
+    if (vaga.status === 'active') {
+      setConfirmVaga(vaga);
+    } else {
+      updateVaga(vaga.id, { status: 'active' });
+      toast.success('Vaga ativada');
+    }
+  };
+
+  const confirmDeactivate = () => {
+    if (!confirmVaga) return;
+    updateVaga(confirmVaga.id, { status: 'inactive' });
+    toast.success('Vaga desativada');
+    setConfirmVaga(null);
   };
 
   const candidateCount = (vagaId: string) =>
@@ -89,6 +110,21 @@ const VagasPage = () => {
         onClose={() => { setCreateOpen(false); setEditVaga(undefined); }}
         editVaga={editVaga}
       />
+
+      <AlertDialog open={!!confirmVaga} onOpenChange={() => setConfirmVaga(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desativar vaga?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A vaga <strong>{confirmVaga?.title}</strong> ficará invisível no formulário público e não receberá novas candidaturas. Você pode reativar a qualquer momento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeactivate}>Desativar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

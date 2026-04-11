@@ -12,6 +12,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -22,7 +23,17 @@ const Login = () => {
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/login`,
+        });
+        if (error) throw error;
+        toast({
+          title: 'Email enviado!',
+          description: 'Verifique sua caixa de entrada para redefinir sua senha.',
+        });
+        setIsForgotPassword(false);
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -66,7 +77,7 @@ const Login = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
+            {isSignUp && !isForgotPassword && (
               <div className="space-y-2">
                 <Label htmlFor="name">Nome Completo</Label>
                 <Input
@@ -89,31 +100,54 @@ const Login = () => {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
+            {!isForgotPassword && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  )}
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSignUp ? 'Criar Conta' : 'Entrar'}
+              {isForgotPassword ? 'Enviar link de redefinição' : isSignUp ? 'Criar Conta' : 'Entrar'}
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              {isSignUp ? 'Já tem conta? Entrar' : 'Primeiro acesso? Criar conta'}
-            </button>
+          <div className="mt-4 text-center space-y-2">
+            {isForgotPassword ? (
+              <button
+                type="button"
+                onClick={() => setIsForgotPassword(false)}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Voltar para o login
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                {isSignUp ? 'Já tem conta? Entrar' : 'Primeiro acesso? Criar conta'}
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>

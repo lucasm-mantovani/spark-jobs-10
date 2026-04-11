@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, Users, Shield, ShieldCheck, Mail, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface TeamMember {
   id: string;
@@ -35,6 +36,7 @@ const Configuracoes = () => {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [deleteInviteId, setDeleteInviteId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [inviteRole, setInviteRole] = useState<string>('recruiter');
@@ -101,14 +103,16 @@ const Configuracoes = () => {
     }
   };
 
-  const handleDeleteInvitation = async (id: string) => {
-    const { error } = await supabase.from('invitations').delete().eq('id', id);
+  const handleDeleteInvitation = async () => {
+    if (!deleteInviteId) return;
+    const { error } = await supabase.from('invitations').delete().eq('id', deleteInviteId);
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Convite removido' });
       fetchData();
     }
+    setDeleteInviteId(null);
   };
 
   const roleLabel = (r: string) => {
@@ -293,7 +297,7 @@ const Configuracoes = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDeleteInvitation(inv.id)}
+                        onClick={() => setDeleteInviteId(inv.id)}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -305,6 +309,22 @@ const Configuracoes = () => {
           )}
         </CardContent>
       </Card>
+      <AlertDialog open={!!deleteInviteId} onOpenChange={() => setDeleteInviteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover convite?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O convite será cancelado e o usuário não poderá mais usá-lo para criar uma conta. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteInvitation} className="bg-destructive hover:bg-destructive/90">
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

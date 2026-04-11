@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import type { Vaga, FormQuestion, FieldType, HiringModel } from '@/types';
 import { useAppState } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const fieldTypeLabels: Record<FieldType, string> = {
@@ -38,16 +39,24 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
   const [loadingAi, setLoadingAi] = useState(false);
 
   const generateAiQuestions = async () => {
+    if (!title.trim()) {
+      toast.error('Preencha o título da vaga antes de gerar perguntas');
+      return;
+    }
     setLoadingAi(true);
-    // Simulated AI endpoint
-    await new Promise(r => setTimeout(r, 1500));
-    const suggestions = `1. Descreva uma situação em que você liderou um projeto desafiador.
-2. Como você lida com prazos apertados e múltiplas prioridades?
-3. Qual foi sua maior contribuição técnica em um projeto anterior?
-4. Como você aborda a resolução de conflitos em equipe?
-5. Descreva sua experiência com ${requirements.split(',')[0] || 'as tecnologias exigidas'}.`;
-    setAiSuggestions(suggestions);
-    setLoadingAi(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-questions', {
+        body: { title, description, requirements, behavioral_criteria: behavioral },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const questions: string[] = data.questions ?? [];
+      setAiSuggestions(questions.join('\n'));
+    } catch (err: any) {
+      toast.error('Erro ao gerar perguntas: ' + (err.message ?? 'tente novamente'));
+    } finally {
+      setLoadingAi(false);
+    }
   };
 
   const addQuestion = () => {
