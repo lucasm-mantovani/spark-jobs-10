@@ -41,8 +41,9 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
   if (!candidate) return null;
 
   const vaga = vagas.find(v => v.id === candidate.vaga_id);
-  const avgScore = candidate.ai_scores
-    ? Math.round(Object.values(candidate.ai_scores).reduce((a, b) => a + b, 0) / Object.values(candidate.ai_scores).length)
+  const aiScoreValues = Object.values(candidate.ai_scores ?? {});
+  const avgScore = aiScoreValues.length > 0
+    ? Math.round(aiScoreValues.reduce((a, b) => a + b, 0) / aiScoreValues.length)
     : null;
 
   const handleStatusChange = (status: CandidateStatus) => {

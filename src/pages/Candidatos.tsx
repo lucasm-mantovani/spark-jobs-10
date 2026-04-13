@@ -122,8 +122,9 @@ const CandidatosPage = () => {
                   </TableRow>
                 ) : (
                   paginated.map(c => {
-                    const avgScore = c.ai_scores
-                      ? Math.round(Object.values(c.ai_scores).reduce((a, b) => a + b, 0) / Object.values(c.ai_scores).length)
+                    const scoreValues = Object.values(c.ai_scores ?? {});
+                    const avgScore = scoreValues.length > 0
+                      ? Math.round(scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length)
                       : null;
                     return (
                       <TableRow
