@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Clock } from 'lucide-react';
+import { CalendarIcon, Clock, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -15,21 +15,49 @@ interface Props {
   open: boolean;
   onClose: () => void;
   candidateName: string;
+  candidateEmail?: string;
+  vagaTitle?: string;
 }
 
-const ScheduleInterviewModal: React.FC<Props> = ({ open, onClose, candidateName }) => {
+const ScheduleInterviewModal: React.FC<Props> = ({ open, onClose, candidateName, candidateEmail = '', vagaTitle = '' }) => {
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState('10:00');
-  const [notes, setNotes] = useState('');
+  const [duration, setDuration] = useState('60');
   const [location, setLocation] = useState('');
+  const [notes, setNotes] = useState('');
 
   const handleSchedule = () => {
     if (!date) {
       toast.error('Selecione uma data');
       return;
     }
-    toast.success(`Entrevista agendada para ${candidateName} em ${format(date, 'dd/MM/yyyy')} às ${time}`);
-    toast.info('Integração com Google Calendar será implementada em breve.');
+
+    const [hours, minutes] = time.split(':').map(Number);
+    const startDate = new Date(date);
+    startDate.setHours(hours, minutes, 0, 0);
+
+    const endDate = new Date(startDate);
+    endDate.setMinutes(endDate.getMinutes() + Number(duration));
+
+    const formatGCal = (d: Date) =>
+      d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    const title = `Entrevista - ${candidateName}${vagaTitle ? ` (${vagaTitle})` : ''}`;
+    const details = [
+      notes,
+      candidateEmail ? `Candidato: ${candidateEmail}` : '',
+    ].filter(Boolean).join('\n');
+
+    const gcalUrl = new URL('https://calendar.google.com/calendar/render');
+    gcalUrl.searchParams.set('action', 'TEMPLATE');
+    gcalUrl.searchParams.set('text', title);
+    gcalUrl.searchParams.set('dates', `${formatGCal(startDate)}/${formatGCal(endDate)}`);
+    if (location) gcalUrl.searchParams.set('location', location);
+    if (details) gcalUrl.searchParams.set('details', details);
+    if (candidateEmail) gcalUrl.searchParams.set('add', candidateEmail);
+
+    window.open(gcalUrl.toString(), '_blank');
+    toast.success(`Google Calendar aberto com a entrevista de ${candidateName}`);
     onClose();
   };
 
@@ -55,11 +83,17 @@ const ScheduleInterviewModal: React.FC<Props> = ({ open, onClose, candidateName 
               </PopoverContent>
             </Popover>
           </div>
-          <div className="space-y-1.5">
-            <Label>Horário</Label>
-            <div className="relative">
-              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="time" value={time} onChange={e => setTime(e.target.value)} className="pl-9" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Horário</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input type="time" value={time} onChange={e => setTime(e.target.value)} className="pl-9" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Duração (min)</Label>
+              <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} min={15} step={15} />
             </div>
           </div>
           <div className="space-y-1.5">
@@ -72,7 +106,10 @@ const ScheduleInterviewModal: React.FC<Props> = ({ open, onClose, candidateName 
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSchedule}>Agendar</Button>
+            <Button onClick={handleSchedule} className="gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Abrir no Google Calendar
+            </Button>
           </div>
         </div>
       </DialogContent>

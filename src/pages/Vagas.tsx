@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users } from 'lucide-react';
+import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAppState } from '@/contexts/AppContext';
@@ -23,7 +23,16 @@ const VagasPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [editVaga, setEditVaga] = useState<Vaga | undefined>();
   const [confirmVaga, setConfirmVaga] = useState<Vaga | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const copyFormLink = (vagaId: string) => {
+    const url = `${window.location.origin}/formulario/${vagaId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(vagaId);
+    toast.success('Link copiado!');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const toggleStatus = (vaga: Vaga) => {
     if (vaga.status === 'active') {
@@ -90,7 +99,11 @@ const VagasPage = () => {
               </div>
               <div className="flex gap-1 pt-1 flex-wrap">
                 <Button size="sm" variant="outline" onClick={() => navigate(`/formulario/${vaga.id}`)}>
-                  <Eye className="h-3 w-3" /> Formulário
+                  <Eye className="h-3 w-3" /> Ver
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => copyFormLink(vaga.id)}>
+                  {copiedId === vaga.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                  {copiedId === vaga.id ? 'Copiado' : 'Copiar link'}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => { setEditVaga(vaga); setCreateOpen(true); }}>
                   <Edit2 className="h-3 w-3" /> Editar

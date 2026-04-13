@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useAppState } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin } from 'lucide-react';
+import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Candidate, CandidateStatus } from '@/types';
 import { ALL_STATUSES } from '@/types';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
@@ -30,11 +31,12 @@ const statusColors: Record<CandidateStatus, string> = {
 };
 
 const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
-  const { updateCandidateStatus, addCandidateNote, vagas } = useAppState();
+  const { updateCandidateStatus, addCandidateNote, deleteCandidate, vagas } = useAppState();
   const [newNote, setNewNote] = useState('');
   const [showInterview, setShowInterview] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showTest, setShowTest] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!candidate) return null;
 
@@ -57,8 +59,18 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
 
   const handleReject = () => {
     updateCandidateStatus(candidate.id, 'Rejeitado');
-    setShowEmail(true);
     toast.success('Candidato rejeitado');
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteCandidate(candidate.id);
+      toast.success('Candidato removido');
+      onClose();
+    } catch {
+      toast.error('Erro ao remover candidato');
+    }
+    setShowDeleteConfirm(false);
   };
 
   return (
@@ -104,6 +116,9 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
                 <XCircle className="h-3 w-3" /> Rejeitar
               </Button>
             )}
+            <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="h-3 w-3" /> Excluir
+            </Button>
           </div>
 
           <Tabs defaultValue="info" className="pt-4">
@@ -213,9 +228,15 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
               {candidate.notes.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma nota ainda.</p>
               ) : (
-                [...candidate.notes].reverse().map((note, i) => (
-                  <div key={i} className="rounded-lg border bg-card p-3 text-sm">{note}</div>
-                ))
+                [...candidate.history]
+                  .filter(h => h.action === 'Nota adicionada' && h.details)
+                  .reverse()
+                  .map(h => (
+                    <div key={h.id} className="rounded-lg border bg-card p-3 space-y-1">
+                      <p className="text-sm">{h.details}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString('pt-BR')}</p>
+                    </div>
+                  ))
               )}
             </TabsContent>
 
@@ -254,9 +275,26 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
         </SheetContent>
       </Sheet>
 
-      <ScheduleInterviewModal open={showInterview} onClose={() => setShowInterview(false)} candidateName={candidate.name} />
-      <SendEmailModal open={showEmail} onClose={() => setShowEmail(false)} candidateName={candidate.name} candidateEmail={candidate.email} />
+      <ScheduleInterviewModal open={showInterview} onClose={() => setShowInterview(false)} candidateName={candidate.name} candidateEmail={candidate.email} vagaTitle={candidate.vaga_title} />
+      <SendEmailModal open={showEmail} onClose={() => setShowEmail(false)} candidateName={candidate.name} candidateEmail={candidate.email} vagaTitle={candidate.vaga_title} />
       <AssignTestModal open={showTest} onClose={() => setShowTest(false)} candidateId={candidate.id} candidateName={candidate.name} />
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir candidato?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{candidate.name}</strong> será removido permanentemente, incluindo todas as respostas, notas e histórico. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

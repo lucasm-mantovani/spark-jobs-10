@@ -18,6 +18,7 @@ const PublicForm = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [linkedin, setLinkedin] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -93,6 +94,7 @@ const PublicForm = () => {
         name,
         email,
         phone: phone || null,
+        linkedin: linkedin || null,
         vaga_id: vaga.id,
         vaga_title: vaga.title,
         status: 'Novo',
@@ -150,6 +152,10 @@ const PublicForm = () => {
             <div>
               <Label>Telefone</Label>
               <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(11) 99999-0000" />
+            </div>
+            <div>
+              <Label>LinkedIn (opcional)</Label>
+              <Input value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/seu-perfil" />
             </div>
 
             {/* Resume upload */}

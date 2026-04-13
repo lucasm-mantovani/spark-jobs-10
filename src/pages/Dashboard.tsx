@@ -132,7 +132,11 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-3">
               {vagasComCandidatos.map(v => (
-                <div key={v.id} className="flex items-center justify-between">
+                <button
+                  key={v.id}
+                  onClick={() => navigate('/candidatos')}
+                  className="flex items-center justify-between w-full text-left hover:bg-muted/50 rounded-lg px-2 py-1 -mx-2 transition-colors"
+                >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{v.title}</p>
                     <p className="text-xs text-muted-foreground">{v.hiring_model} · {v.status === 'active' ? 'Ativa' : 'Inativa'}</p>
@@ -140,7 +144,7 @@ const Dashboard = () => {
                   <span className="ml-4 shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
                     {v.total} candidato{v.total !== 1 ? 's' : ''}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           )}

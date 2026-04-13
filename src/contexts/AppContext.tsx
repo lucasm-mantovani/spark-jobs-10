@@ -13,6 +13,7 @@ interface AppState {
   addCandidateNote: (id: string, note: string) => Promise<void>;
   addCandidateHistory: (id: string, entry: HistoryEntry) => Promise<void>;
   updateCandidate: (id: string, updates: Partial<Candidate>) => Promise<void>;
+  deleteCandidate: (id: string) => Promise<void>;
   refreshData: () => Promise<void>;
 }
 
@@ -194,6 +195,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCandidates(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
   };
 
+  const deleteCandidate = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('candidates').delete().eq('id', id);
+    if (error) throw error;
+    setCandidates(prev => prev.filter(c => c.id !== id));
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -207,6 +214,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCandidateNote,
         addCandidateHistory,
         updateCandidate,
+        deleteCandidate,
         refreshData: fetchData,
       }}
     >
