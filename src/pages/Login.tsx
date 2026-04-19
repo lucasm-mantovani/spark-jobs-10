@@ -11,6 +11,7 @@ import { Loader2, Shield } from 'lucide-react';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -34,6 +35,11 @@ const Login = () => {
         });
         setIsForgotPassword(false);
       } else if (isSignUp) {
+        if (password !== confirmPassword) {
+          toast({ title: 'Erro', description: 'As senhas não coincidem.', variant: 'destructive' });
+          setLoading(false);
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -123,6 +129,24 @@ const Login = () => {
                   required
                   minLength={6}
                 />
+              </div>
+            )}
+            {isSignUp && !isForgotPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  className={confirmPassword && password !== confirmPassword ? 'border-destructive' : ''}
+                />
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-destructive">As senhas não coincidem</p>
+                )}
               </div>
             )}
             <Button type="submit" className="w-full" disabled={loading}>

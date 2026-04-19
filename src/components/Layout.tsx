@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Briefcase, Users, Settings, LayoutDashboard, LogOut } from 'lucide-react';
+import { Briefcase, Users, Settings, LayoutDashboard, LogOut, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppState } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -14,6 +15,7 @@ const navItems = [
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { loading } = useAppState();
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,7 +60,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </div>
       </header>
-      <main className="container py-6 animate-fade-in">{children}</main>
+      <main className="container py-6 animate-fade-in">
+        {loading ? (
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : children}
+      </main>
     </div>
   );
 };

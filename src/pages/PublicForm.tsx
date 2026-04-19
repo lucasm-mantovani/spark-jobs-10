@@ -177,8 +177,11 @@ const PublicForm = () => {
               </div>
             </div>
 
-            {/* Dynamic questions */}
-            {vaga.questions.map((q, i) => (
+            {/* Dynamic questions — fixed fields are already rendered above */}
+            {vaga.questions.filter(q => {
+              const label = q.label.toLowerCase().trim();
+              return !['nome', 'nome completo', 'email', 'e-mail', 'telefone', 'celular', 'linkedin', 'currículo', 'curriculo', 'cv'].includes(label);
+            }).map((q, i) => (
               <div key={q.id} className="space-y-1">
                 <Label>{i + 1}. {q.label} {q.required && '*'}</Label>
                 {q.type === 'short_text' && (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check } from 'lucide-react';
+import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAppState } from '@/contexts/AppContext';
@@ -17,6 +17,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const VagasPage = () => {
   const { vagas, updateVaga, candidates } = useAppState();
@@ -97,21 +103,31 @@ const VagasPage = () => {
                 <span className="mx-1">•</span>
                 <span>{vaga.questions.length} pergunta(s)</span>
               </div>
-              <div className="flex gap-1 pt-1 flex-wrap">
+              <div className="flex items-center gap-1 pt-1">
                 <Button size="sm" variant="outline" onClick={() => navigate(`/formulario/${vaga.id}`)}>
-                  <Eye className="h-3 w-3" /> Ver
+                  <Eye className="h-3 w-3" /> Ver formulário
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => copyFormLink(vaga.id)}>
                   {copiedId === vaga.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                  {copiedId === vaga.id ? 'Copiado' : 'Copiar link'}
+                  {copiedId === vaga.id ? 'Copiado!' : 'Copiar link'}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => { setEditVaga(vaga); setCreateOpen(true); }}>
-                  <Edit2 className="h-3 w-3" /> Editar
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => toggleStatus(vaga)}>
-                  {vaga.status === 'active' ? <ToggleRight className="h-3 w-3" /> : <ToggleLeft className="h-3 w-3" />}
-                  {vaga.status === 'active' ? 'Desativar' : 'Ativar'}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost" className="px-2">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => { setEditVaga(vaga); setCreateOpen(true); }}>
+                      <Edit2 className="h-3 w-3 mr-2" /> Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleStatus(vaga)}>
+                      {vaga.status === 'active'
+                        ? <><ToggleRight className="h-3 w-3 mr-2" /> Desativar</>
+                        : <><ToggleLeft className="h-3 w-3 mr-2" /> Ativar</>}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ))}
