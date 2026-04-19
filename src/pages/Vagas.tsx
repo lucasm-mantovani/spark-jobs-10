@@ -99,9 +99,9 @@ const VagasPage = () => {
               </div>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Users className="h-3 w-3" />
-                <span>{candidateCount(vaga.id)} candidato(s)</span>
+                <span>{candidateCount(vaga.id)} {candidateCount(vaga.id) === 1 ? 'candidato' : 'candidatos'}</span>
                 <span className="mx-1">•</span>
-                <span>{vaga.questions.length} pergunta(s)</span>
+                <span>{vaga.questions.length} {vaga.questions.length === 1 ? 'pergunta' : 'perguntas'}</span>
               </div>
               <div className="flex items-center gap-1 pt-1">
                 <Button size="sm" variant="outline" onClick={() => navigate(`/formulario/${vaga.id}`)}>

@@ -7,9 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { CheckCircle2, Upload } from 'lucide-react';
 import type { Vaga } from '@/types';
+
+const FIXED_LABELS = ['nome', 'nome completo', 'email', 'e-mail', 'telefone', 'celular', 'linkedin', 'currículo', 'curriculo', 'cv'];
 
 const PublicForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +23,10 @@ const PublicForm = () => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [linkedin, setLinkedin] = useState('');
+  const [salaryClaim, setSalaryClaim] = useState('');
+  const [availability, setAvailability] = useState('');
+  const [pcd, setPcd] = useState('');
+  const [lgpdConsent, setLgpdConsent] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -32,9 +40,7 @@ const PublicForm = () => {
       .eq('id', id)
       .single()
       .then(({ data, error }) => {
-        if (!error && data) {
-          setVaga(data as unknown as Vaga);
-        }
+        if (!error && data) setVaga(data as unknown as Vaga);
         setLoadingVaga(false);
       });
   }, [id]);
@@ -87,6 +93,15 @@ const PublicForm = () => {
       toast.error('Nome e email são obrigatórios');
       return;
     }
+    if (!lgpdConsent) {
+      toast.error('É necessário aceitar a Política de Privacidade para enviar a candidatura');
+      return;
+    }
+
+    const extraAnswers: Record<string, string> = { ...answers };
+    if (salaryClaim) extraAnswers['__pretensao_salarial'] = salaryClaim;
+    if (availability) extraAnswers['__disponibilidade'] = availability;
+    if (pcd) extraAnswers['__pcd'] = pcd;
 
     setSubmitting(true);
     try {
@@ -98,13 +113,12 @@ const PublicForm = () => {
         vaga_id: vaga.id,
         vaga_title: vaga.title,
         status: 'Novo',
-        answers,
+        answers: extraAnswers,
         notes: [],
         history: [{ id: crypto.randomUUID(), action: 'Candidatura recebida', created_at: new Date().toISOString() }],
         tests: [],
       }));
       const { error } = await supabase.from('candidates').insert(payload as any);
-
       if (error) throw error;
       setSubmitted(true);
       toast.success('Candidatura enviada com sucesso!');
@@ -114,6 +128,10 @@ const PublicForm = () => {
       setSubmitting(false);
     }
   };
+
+  const filteredQuestions = vaga.questions.filter(
+    q => !FIXED_LABELS.includes(q.label.toLowerCase().trim())
+  );
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
@@ -132,13 +150,14 @@ const PublicForm = () => {
               <span className="rounded-full bg-muted px-3 py-1">{vaga.hiring_model}</span>
               {vaga.salary_max > 0 && (
                 <span className="rounded-full bg-muted px-3 py-1">
-                  R$ {vaga.salary_min.toLocaleString()} - {vaga.salary_max.toLocaleString()}
+                  R$ {vaga.salary_min.toLocaleString()} – {vaga.salary_max.toLocaleString()}
                 </span>
               )}
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Campos fixos */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Nome completo *</Label>
@@ -149,16 +168,18 @@ const PublicForm = () => {
                 <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
               </div>
             </div>
-            <div>
-              <Label>Telefone</Label>
-              <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(11) 99999-0000" />
-            </div>
-            <div>
-              <Label>LinkedIn (opcional)</Label>
-              <Input value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/seu-perfil" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Telefone</Label>
+                <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(11) 99999-0000" />
+              </div>
+              <div>
+                <Label>LinkedIn (opcional)</Label>
+                <Input value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="linkedin.com/in/seu-perfil" />
+              </div>
             </div>
 
-            {/* Resume upload */}
+            {/* Currículo */}
             <div>
               <Label>Currículo (PDF)</Label>
               <div className="mt-1">
@@ -177,11 +198,53 @@ const PublicForm = () => {
               </div>
             </div>
 
-            {/* Dynamic questions — fixed fields are already rendered above */}
-            {vaga.questions.filter(q => {
-              const label = q.label.toLowerCase().trim();
-              return !['nome', 'nome completo', 'email', 'e-mail', 'telefone', 'celular', 'linkedin', 'currículo', 'curriculo', 'cv'].includes(label);
-            }).map((q, i) => (
+            {/* Campos adicionais */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Pretensão salarial (opcional)</Label>
+                <Input
+                  value={salaryClaim}
+                  onChange={e => setSalaryClaim(e.target.value)}
+                  placeholder="Ex: R$ 5.000"
+                />
+              </div>
+              <div>
+                <Label>Disponibilidade de início</Label>
+                <Select value={availability} onValueChange={setAvailability}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Imediata">Imediata</SelectItem>
+                    <SelectItem value="15 dias">15 dias</SelectItem>
+                    <SelectItem value="30 dias">30 dias</SelectItem>
+                    <SelectItem value="A combinar">A combinar</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* PCD — obrigatório por lei para vagas CLT com cota */}
+            <div className="space-y-2">
+              <Label>Você se declara Pessoa com Deficiência (PCD)?</Label>
+              <RadioGroup value={pcd} onValueChange={setPcd} className="flex gap-6">
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="Sim" id="pcd-sim" />
+                  <Label htmlFor="pcd-sim" className="font-normal">Sim</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="Não" id="pcd-nao" />
+                  <Label htmlFor="pcd-nao" className="font-normal">Não</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="Prefiro não informar" id="pcd-prefiro" />
+                  <Label htmlFor="pcd-prefiro" className="font-normal">Prefiro não informar</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Perguntas dinâmicas da vaga */}
+            {filteredQuestions.map((q, i) => (
               <div key={q.id} className="space-y-1">
                 <Label>{i + 1}. {q.label} {q.required && '*'}</Label>
                 {q.type === 'short_text' && (
@@ -234,7 +297,27 @@ const PublicForm = () => {
               </div>
             ))}
 
-            <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+            {/* Consentimento LGPD */}
+            <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Seus dados pessoais serão tratados pela <strong>SAFIE</strong> exclusivamente para fins de processo seletivo,
+                conforme a Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018). Você pode solicitar a exclusão
+                dos seus dados a qualquer momento pelo email <strong>privacidade@safie.com.br</strong>.
+              </p>
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="lgpd"
+                  checked={lgpdConsent}
+                  onCheckedChange={v => setLgpdConsent(!!v)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="lgpd" className="text-sm font-normal cursor-pointer leading-relaxed">
+                  Li e aceito o tratamento dos meus dados pessoais para participação neste processo seletivo. *
+                </Label>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" size="lg" disabled={submitting || !lgpdConsent}>
               {submitting ? 'Enviando...' : 'Enviar Candidatura'}
             </Button>
           </form>
