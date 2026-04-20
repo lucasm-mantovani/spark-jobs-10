@@ -99,7 +99,12 @@ const VagasPage = () => {
               </div>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Users className="h-3 w-3" />
-                <span>{candidateCount(vaga.id)} {candidateCount(vaga.id) === 1 ? 'candidato' : 'candidatos'}</span>
+                <button
+                  onClick={() => navigate(`/vagas/${vaga.id}`)}
+                  className="hover:text-primary hover:underline transition-colors"
+                >
+                  {candidateCount(vaga.id)} {candidateCount(vaga.id) === 1 ? 'candidato' : 'candidatos'}
+                </button>
                 <span className="mx-1">•</span>
                 <span>{vaga.questions.length} {vaga.questions.length === 1 ? 'pergunta' : 'perguntas'}</span>
               </div>

@@ -10,6 +10,7 @@ import VagasPage from "@/pages/Vagas";
 import CandidatosPage from "@/pages/Candidatos";
 import Dashboard from "@/pages/Dashboard";
 import Configuracoes from "@/pages/Configuracoes";
+import VagaDetalhe from "@/pages/VagaDetalhe";
 import PublicForm from "@/pages/PublicForm";
 import Login from "@/pages/Login";
 import NotFound from "./pages/NotFound.tsx";
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/formulario/:id" element={<PublicForm />} />
               <Route path="/" element={<Navigate to="/vagas" replace />} />
               <Route path="/vagas" element={<ProtectedRoute><Layout><VagasPage /></Layout></ProtectedRoute>} />
+              <Route path="/vagas/:id" element={<ProtectedRoute><Layout><VagaDetalhe /></Layout></ProtectedRoute>} />
               <Route path="/candidatos" element={<ProtectedRoute><Layout><CandidatosPage /></Layout></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
