@@ -111,6 +111,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime-candidates')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'candidates' }, payload => {
+        const novo = rowToCandidate(payload.new as Record<string, unknown>);
+        setCandidates(prev => prev.some(c => c.id === novo.id) ? prev : [novo, ...prev]);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'candidates' }, payload => {
+        const updated = rowToCandidate(payload.new as Record<string, unknown>);
+        setCandidates(prev => prev.map(c => c.id === updated.id ? updated : c));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'candidates' }, payload => {
+        setCandidates(prev => prev.filter(c => c.id !== (payload.old as { id: string }).id));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   const addVaga = async (vaga: Omit<Vaga, 'id' | 'created_at'>): Promise<Vaga> => {
     const payload = JSON.parse(JSON.stringify(vaga));
     const { data, error } = await supabase

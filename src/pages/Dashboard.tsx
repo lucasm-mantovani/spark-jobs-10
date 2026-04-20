@@ -1,6 +1,6 @@
 import { useAppState } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Users, UserCheck, Clock, TrendingUp, ChevronRight, BarChart2 } from 'lucide-react';
+import { Briefcase, Users, UserCheck, Clock, TrendingUp, ChevronRight, BarChart2, ScrollText } from 'lucide-react';
 import { ALL_STATUSES } from '@/types';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -71,6 +71,12 @@ const Dashboard = () => {
   const recentCandidates = [...candidates]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
+
+  // Audit log — últimas 20 ações em todos os candidatos
+  const auditEntries = candidates
+    .flatMap(c => c.history.map(h => ({ ...h, candidateName: c.name, candidateId: c.id })))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 20);
 
   if (loading) {
     return (
@@ -259,6 +265,41 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+      </div>
+      {/* Audit Log */}
+      <div className="rounded-xl border bg-card p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <ScrollText className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-foreground">Registro de Atividades</h2>
+          <span className="text-xs text-muted-foreground ml-1">— últimas 20 ações</span>
+        </div>
+        {auditEntries.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">Nenhuma atividade registrada ainda.</p>
+        ) : (
+          <div className="relative pl-5 space-y-3">
+            <div className="absolute left-[7px] top-1 bottom-1 w-px bg-border" />
+            {auditEntries.map(entry => (
+              <div key={entry.id} className="relative">
+                <div className="absolute -left-5 top-1.5 h-2 w-2 rounded-full bg-primary/60" />
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm text-foreground">
+                      <span className="font-medium">{entry.candidateName}</span>
+                      {' — '}
+                      <span className="text-muted-foreground">{entry.action}</span>
+                    </p>
+                    {entry.details && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{entry.details}</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {new Date(entry.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

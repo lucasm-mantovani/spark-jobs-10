@@ -28,6 +28,7 @@ const PublicForm = () => {
   const [availability, setAvailability] = useState('');
   const [pcd, setPcd] = useState('');
   const [lgpdConsent, setLgpdConsent] = useState(false);
+  const [origem, setOrigem] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -104,6 +105,7 @@ const PublicForm = () => {
     if (salaryClaim) extraAnswers['__pretensao_salarial'] = salaryClaim;
     if (availability) extraAnswers['__disponibilidade'] = availability;
     if (pcd) extraAnswers['__pcd'] = pcd;
+    if (origem) extraAnswers['__origem'] = origem;
 
     setSubmitting(true);
     try {
@@ -231,6 +233,26 @@ const PublicForm = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Origem / referral */}
+            <div className="space-y-1.5">
+              <Label>Como ficou sabendo desta vaga? (opcional)</Label>
+              <Select value={origem} onValueChange={setOrigem}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                  <SelectItem value="Instagram">Instagram</SelectItem>
+                  <SelectItem value="Site da empresa">Site da empresa</SelectItem>
+                  <SelectItem value="Indicação de amigo/colega">Indicação de amigo/colega</SelectItem>
+                  <SelectItem value="Vagas.com">Vagas.com</SelectItem>
+                  <SelectItem value="Indeed">Indeed</SelectItem>
+                  <SelectItem value="Catho">Catho</SelectItem>
+                  <SelectItem value="Outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* PCD — obrigatório por lei para vagas CLT com cota */}
