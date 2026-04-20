@@ -6,9 +6,11 @@ import { useAppState } from '@/contexts/AppContext';
 import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CandidateFilters, { type Filters } from '@/components/CandidateFilters';
 import CandidateDetailPanel from '@/components/CandidateDetailPanel';
 import type { Candidate, CandidateStatus } from '@/types';
+import { ALL_STATUSES } from '@/types';
 
 const statusColors: Record<CandidateStatus, string> = {
   Novo: 'bg-primary',
@@ -24,7 +26,7 @@ type SortKey = 'name' | 'email' | 'vaga_title' | 'created_at' | 'status';
 const PAGE_SIZE = 10;
 
 const CandidatosPage = () => {
-  const { candidates, vagas } = useAppState();
+  const { candidates, vagas, updateCandidateStatus } = useAppState();
   const [filters, setFilters] = useState<Filters>({ vagaId: 'all', statuses: [], keyword: '' });
   const [onlyTalentos, setOnlyTalentos] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(true);
@@ -150,12 +152,13 @@ const CandidatosPage = () => {
                   <SortHeader label="Data" sortId="created_at" />
                   <SortHeader label="Status" sortId="status" />
                   <TableHead className="text-xs">Score IA</TableHead>
+                  <TableHead className="text-xs w-36">Ação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       Nenhum candidato encontrado
                     </TableCell>
                   </TableRow>
@@ -186,6 +189,24 @@ const CandidatosPage = () => {
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
+                        </TableCell>
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <Select
+                            value={c.status}
+                            onValueChange={v => {
+                              updateCandidateStatus(c.id, v as CandidateStatus);
+                              toast.success(`Status alterado para "${v}"`);
+                            }}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ALL_STATUSES.map(s => (
+                                <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                       </TableRow>
                     );

@@ -14,6 +14,7 @@ import { CheckCircle2, Upload } from 'lucide-react';
 import type { Vaga } from '@/types';
 
 const FIXED_LABELS = ['nome', 'nome completo', 'email', 'e-mail', 'telefone', 'celular', 'linkedin', 'currículo', 'curriculo', 'cv'];
+const COMPANY_KEY = 'safie_company_settings';
 
 const PublicForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,7 @@ const PublicForm = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const company = JSON.parse(localStorage.getItem(COMPANY_KEY) ?? '{}') as { name?: string; logo?: string; primaryColor?: string };
 
   useEffect(() => {
     if (!id) return;
@@ -139,10 +141,17 @@ const PublicForm = () => {
         <div className="rounded-xl border bg-card p-6 md:p-8 space-y-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-                <span className="text-xs font-bold text-primary-foreground">S</span>
-              </div>
-              <span className="font-bold text-foreground">SAFIE</span>
+              {company.logo ? (
+                <img src={company.logo} alt={company.name || 'Logo'} className="h-9 object-contain" />
+              ) : (
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: company.primaryColor || '#6366f1' }}
+                >
+                  <span className="text-xs font-bold text-white">{(company.name || 'S').charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+              <span className="font-bold text-foreground">{company.name || 'SAFIE'}</span>
             </div>
             <h1 className="text-2xl font-bold text-foreground">{vaga.title}</h1>
             <p className="text-sm text-muted-foreground">{vaga.description}</p>

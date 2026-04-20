@@ -48,6 +48,7 @@ const App = () => (
               <Route path="/candidatos" element={<ProtectedRoute><Layout><CandidatosPage /></Layout></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
+              <Route path="/pipeline" element={<Navigate to="/vagas" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

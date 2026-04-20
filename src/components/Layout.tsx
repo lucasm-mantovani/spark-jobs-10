@@ -96,8 +96,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Link
                 key={to}
                 to={to}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors ${
-                  active ? 'text-primary' : 'text-muted-foreground'
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors ${
+                  active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Icon className="h-5 w-5" />

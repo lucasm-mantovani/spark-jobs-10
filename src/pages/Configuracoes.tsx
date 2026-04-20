@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 interface TeamMember { id: string; full_name: string; email: string; role: string; created_at: string; }
 interface Invitation { id: string; email: string; role: string; status: string; created_at: string; }
-interface CompanySettings { name: string; email: string; website: string; }
+interface CompanySettings { name: string; email: string; website: string; logo: string; primaryColor: string; }
 
 const COMPANY_KEY = 'safie_company_settings';
 
@@ -33,7 +33,7 @@ const Configuracoes = () => {
   const [inviting, setInviting] = useState(false);
 
   // Empresa
-  const [company, setCompany] = useState<CompanySettings>({ name: 'SAFIE', email: '', website: '' });
+  const [company, setCompany] = useState<CompanySettings>({ name: 'SAFIE', email: '', website: '', logo: '', primaryColor: '#6366f1' });
 
   useEffect(() => {
     const saved = localStorage.getItem(COMPANY_KEY);
@@ -155,6 +155,22 @@ const Configuracoes = () => {
               <div className="space-y-2">
                 <Label>Site (opcional)</Label>
                 <Input value={company.website} onChange={e => setCompany(p => ({ ...p, website: e.target.value }))} placeholder="https://empresa.com.br" />
+              </div>
+              <div className="space-y-2">
+                <Label>URL do Logo (opcional)</Label>
+                <Input value={company.logo} onChange={e => setCompany(p => ({ ...p, logo: e.target.value }))} placeholder="https://empresa.com.br/logo.png" />
+                <p className="text-xs text-muted-foreground">Link público da imagem do logo — será exibido no formulário de candidatura</p>
+                {company.logo && (
+                  <img src={company.logo} alt="Preview do logo" className="h-12 object-contain rounded border bg-muted/30 p-1" onError={e => (e.currentTarget.style.display = 'none')} />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Cor principal da marca</Label>
+                <div className="flex items-center gap-3">
+                  <input type="color" value={company.primaryColor} onChange={e => setCompany(p => ({ ...p, primaryColor: e.target.value }))} className="h-10 w-16 cursor-pointer rounded border" />
+                  <Input value={company.primaryColor} onChange={e => setCompany(p => ({ ...p, primaryColor: e.target.value }))} className="w-32 font-mono text-sm" placeholder="#6366f1" />
+                </div>
+                <p className="text-xs text-muted-foreground">Cor exibida no cabeçalho do formulário público de candidatura</p>
               </div>
               <Button onClick={saveCompany}>Salvar</Button>
             </CardContent>

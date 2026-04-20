@@ -16,6 +16,7 @@ import ScheduleInterviewModal from './ScheduleInterviewModal';
 import SendEmailModal from './SendEmailModal';
 import AssignTestModal from './AssignTestModal';
 import AdmissaoPanel from './AdmissaoPanel';
+import ScorecardModal from './ScorecardModal';
 
 interface Props {
   candidate: Candidate | null;
@@ -39,6 +40,7 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
   const [showTest, setShowTest] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAdmissao, setShowAdmissao] = useState(false);
+  const [showScorecard, setShowScorecard] = useState(false);
 
   if (!candidate) return null;
 
@@ -124,6 +126,11 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
             <Button size="sm" variant="outline" onClick={() => setShowTest(true)}>
               <ClipboardCheck className="h-3 w-3" /> Teste
             </Button>
+            {candidate.status === 'Entrevistado' && (
+              <Button size="sm" variant="outline" onClick={() => setShowScorecard(true)}>
+                <FileText className="h-3 w-3" /> Scorecard
+              </Button>
+            )}
             {candidate.status !== 'Rejeitado' && (
               <Button size="sm" variant="outline" className="text-destructive" onClick={handleReject}>
                 <XCircle className="h-3 w-3" /> Rejeitar
@@ -301,6 +308,7 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
       <AssignTestModal open={showTest} onClose={() => setShowTest(false)} candidateId={candidate.id} candidateName={candidate.name} />
 
       <AdmissaoPanel candidate={candidate} open={showAdmissao} onClose={() => setShowAdmissao(false)} />
+      <ScorecardModal open={showScorecard} onClose={() => setShowScorecard(false)} candidateId={candidate.id} candidateName={candidate.name} />
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
