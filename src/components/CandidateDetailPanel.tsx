@@ -8,13 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useAppState } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2, Star } from 'lucide-react';
+import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2, Star, UserCheck } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Candidate, CandidateStatus } from '@/types';
 import { ALL_STATUSES } from '@/types';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import SendEmailModal from './SendEmailModal';
 import AssignTestModal from './AssignTestModal';
+import AdmissaoPanel from './AdmissaoPanel';
 
 interface Props {
   candidate: Candidate | null;
@@ -37,6 +38,7 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
   const [showEmail, setShowEmail] = useState(false);
   const [showTest, setShowTest] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdmissao, setShowAdmissao] = useState(false);
 
   if (!candidate) return null;
 
@@ -130,6 +132,11 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
             <Button size="sm" variant={isBancoTalentos ? 'default' : 'outline'} className={isBancoTalentos ? 'bg-yellow-500 hover:bg-yellow-600' : ''} onClick={toggleBancoTalentos}>
               <Star className="h-3 w-3" /> {isBancoTalentos ? 'No banco' : 'Banco de talentos'}
             </Button>
+            {candidate.status === 'Contratado' && (
+              <Button size="sm" variant="outline" className="text-green-700 border-green-400 hover:bg-green-50" onClick={() => setShowAdmissao(true)}>
+                <UserCheck className="h-3 w-3" /> Admissão
+              </Button>
+            )}
             <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={() => setShowDeleteConfirm(true)}>
               <Trash2 className="h-3 w-3" /> Excluir
             </Button>
@@ -292,6 +299,8 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
       <ScheduleInterviewModal open={showInterview} onClose={() => setShowInterview(false)} candidateName={candidate.name} candidateEmail={candidate.email} vagaTitle={candidate.vaga_title} />
       <SendEmailModal open={showEmail} onClose={() => setShowEmail(false)} candidateName={candidate.name} candidateEmail={candidate.email} vagaTitle={candidate.vaga_title} />
       <AssignTestModal open={showTest} onClose={() => setShowTest(false)} candidateId={candidate.id} candidateName={candidate.name} />
+
+      <AdmissaoPanel candidate={candidate} open={showAdmissao} onClose={() => setShowAdmissao(false)} />
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>

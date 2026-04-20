@@ -22,8 +22,27 @@ export interface Vaga {
   salary_min: number;
   salary_max: number;
   questions: FormQuestion[];
+  pipeline_stages: string[];
   status: 'active' | 'inactive';
   created_at: string;
+}
+
+export interface DocumentoAdmissao {
+  id: string;
+  nome: string;
+  status: 'Pendente' | 'Entregue' | 'Aprovado';
+}
+
+export interface Admissao {
+  id: string;
+  candidate_id: string;
+  status: 'Pendente' | 'Em andamento' | 'Concluída';
+  documentos: DocumentoAdmissao[];
+  tipo_contrato: string;
+  data_inicio: string | null;
+  observacoes: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export type CandidateStatus = 'Novo' | 'Triado' | 'Entrevistado' | 'Teste' | 'Contratado' | 'Rejeitado';

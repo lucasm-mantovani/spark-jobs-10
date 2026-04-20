@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Vaga, Candidate, CandidateStatus, HistoryEntry } from '@/types';
+import type { Vaga, Candidate, CandidateStatus, HistoryEntry, Admissao, DocumentoAdmissao } from '@/types';
+import { ALL_STATUSES } from '@/types';
 
 interface AppState {
   vagas: Vaga[];
   candidates: Candidate[];
+  admissoes: Admissao[];
   loading: boolean;
   addVaga: (vaga: Omit<Vaga, 'id' | 'created_at'>) => Promise<Vaga>;
   updateVaga: (id: string, updates: Partial<Vaga>) => Promise<void>;
@@ -14,6 +16,7 @@ interface AppState {
   addCandidateHistory: (id: string, entry: HistoryEntry) => Promise<void>;
   updateCandidate: (id: string, updates: Partial<Candidate>) => Promise<void>;
   deleteCandidate: (id: string) => Promise<void>;
+  upsertAdmissao: (admissao: Omit<Admissao, 'id' | 'created_at' | 'updated_at'> & { id?: string }) => Promise<Admissao>;
   refreshData: () => Promise<void>;
 }
 
@@ -37,6 +40,7 @@ function rowToVaga(row: Record<string, unknown>): Vaga {
     salary_min: row.salary_min as number,
     salary_max: row.salary_max as number,
     questions: (row.questions as Vaga['questions']) ?? [],
+    pipeline_stages: (row.pipeline_stages as string[]) ?? [...ALL_STATUSES],
     status: row.status as 'active' | 'inactive',
     created_at: row.created_at as string,
   };
@@ -63,17 +67,33 @@ function rowToCandidate(row: Record<string, unknown>): Candidate {
   };
 }
 
+function rowToAdmissao(row: Record<string, unknown>): Admissao {
+  return {
+    id: row.id as string,
+    candidate_id: row.candidate_id as string,
+    status: (row.status as Admissao['status']) ?? 'Pendente',
+    documentos: (row.documentos as DocumentoAdmissao[]) ?? [],
+    tipo_contrato: (row.tipo_contrato as string) ?? 'CLT',
+    data_inicio: (row.data_inicio as string | null) ?? null,
+    observacoes: (row.observacoes as string) ?? '',
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+  };
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [vagas, setVagas] = useState<Vaga[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [admissoes, setAdmissoes] = useState<Admissao[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [vagasRes, candidatesRes] = await Promise.all([
+      const [vagasRes, candidatesRes, admissoesRes] = await Promise.all([
         supabase.from('vagas').select('*').order('created_at', { ascending: false }),
         supabase.from('candidates').select('*').order('created_at', { ascending: false }),
+        supabase.from('admissoes').select('*').order('created_at', { ascending: false }),
       ]);
 
       if (vagasRes.error) throw vagasRes.error;
@@ -81,6 +101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       setVagas((vagasRes.data ?? []).map(rowToVaga));
       setCandidates((candidatesRes.data ?? []).map(rowToCandidate));
+      setAdmissoes((admissoesRes.data ?? []).map(rowToAdmissao));
     } finally {
       setLoading(false);
     }
@@ -201,11 +222,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCandidates(prev => prev.filter(c => c.id !== id));
   };
 
+  const upsertAdmissao = async (admissao: Omit<Admissao, 'id' | 'created_at' | 'updated_at'> & { id?: string }): Promise<Admissao> => {
+    const payload = JSON.parse(JSON.stringify({ ...admissao, updated_at: new Date().toISOString() }));
+    const { data, error } = await supabase.from('admissoes').upsert(payload).select().single();
+    if (error) throw error;
+    const nova = rowToAdmissao(data);
+    setAdmissoes(prev => {
+      const exists = prev.find(a => a.id === nova.id);
+      return exists ? prev.map(a => a.id === nova.id ? nova : a) : [nova, ...prev];
+    });
+    return nova;
+  };
+
   return (
     <AppContext.Provider
       value={{
         vagas,
         candidates,
+        admissoes,
         loading,
         addVaga,
         updateVaga,
@@ -215,6 +249,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCandidateHistory,
         updateCandidate,
         deleteCandidate,
+        upsertAdmissao,
         refreshData: fetchData,
       }}
     >

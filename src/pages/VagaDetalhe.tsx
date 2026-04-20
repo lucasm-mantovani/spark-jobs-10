@@ -108,7 +108,7 @@ const VagaDetalhe = () => {
       {/* Kanban Board */}
       <div className="overflow-x-auto pb-4">
         <div className="flex gap-3 min-w-max">
-          {ALL_STATUSES.map(status => {
+          {(vaga.pipeline_stages as CandidateStatus[]).map(status => {
             const columnCandidates = vagaCandidates.filter(c => c.status === status);
             const isDragOver = dragOverStatus === status;
 

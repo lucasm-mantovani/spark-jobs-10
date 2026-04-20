@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, Sparkles, Loader2, GripVertical, Eye, Bookmark } from 'lucide-react';
-import type { Vaga, FormQuestion, FieldType, HiringModel } from '@/types';
+import type { Vaga, FormQuestion, FieldType, HiringModel, CandidateStatus } from '@/types';
+import { ALL_STATUSES } from '@/types';
 import { useAppState } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -39,6 +40,7 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
   const [salaryMin, setSalaryMin] = useState(0);
   const [salaryMax, setSalaryMax] = useState(0);
   const [questions, setQuestions] = useState<FormQuestion[]>([]);
+  const [pipelineStages, setPipelineStages] = useState<CandidateStatus[]>([...ALL_STATUSES]);
   const [aiSuggestions, setAiSuggestions] = useState('');
   const [loadingAi, setLoadingAi] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -57,6 +59,7 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
     setSalaryMin(editVaga?.salary_min ?? 0);
     setSalaryMax(editVaga?.salary_max ?? 0);
     setQuestions(editVaga?.questions ?? []);
+    setPipelineStages((editVaga?.pipeline_stages as CandidateStatus[]) ?? [...ALL_STATUSES]);
     setAiSuggestions('');
   }, [editVaga, open]);
 
@@ -111,9 +114,14 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
       toast.error('Título da vaga é obrigatório');
       return;
     }
+    if (pipelineStages.length === 0) {
+      toast.error('Selecione pelo menos uma etapa do pipeline');
+      return;
+    }
     const payload = {
       title, description, requirements, behavioral_criteria: behavioral,
       hiring_model: hiringModel, salary_min: salaryMin, salary_max: salaryMax, questions,
+      pipeline_stages: pipelineStages,
     };
     if (editVaga) {
       try {
@@ -185,6 +193,34 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
                   <Input type="number" value={salaryMax || ''} onChange={e => setSalaryMax(+e.target.value)} placeholder="Máx" />
                 </div>
               </div>
+            </div>
+
+            {/* Pipeline stages */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Etapas do Pipeline</Label>
+              <p className="text-xs text-muted-foreground">Selecione quais etapas aparecerão no Kanban desta vaga</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_STATUSES.map(stage => {
+                  const active = pipelineStages.includes(stage);
+                  return (
+                    <button
+                      key={stage}
+                      type="button"
+                      onClick={() => setPipelineStages(prev =>
+                        active
+                          ? prev.filter(s => s !== stage)
+                          : [...prev, stage]
+                      )}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${active ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted text-muted-foreground border-border hover:border-primary/50'}`}
+                    >
+                      {stage}
+                    </button>
+                  );
+                })}
+              </div>
+              {pipelineStages.length === 0 && (
+                <p className="text-xs text-destructive">Selecione pelo menos uma etapa</p>
+              )}
             </div>
 
             {/* Gerador IA */}
