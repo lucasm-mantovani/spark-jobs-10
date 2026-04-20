@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check, MoreHorizontal } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check, MoreHorizontal, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useAppState } from '@/contexts/AppContext';
 import CreateVagaModal from '@/components/CreateVagaModal';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +31,8 @@ const VagasPage = () => {
   const [editVaga, setEditVaga] = useState<Vaga | undefined>();
   const [confirmVaga, setConfirmVaga] = useState<Vaga | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const navigate = useNavigate();
 
   const copyFormLink = (vagaId: string) => {
@@ -59,6 +62,14 @@ const VagasPage = () => {
   const candidateCount = (vagaId: string) =>
     candidates.filter(c => c.vaga_id === vagaId).length;
 
+  const filteredVagas = useMemo(() => {
+    return vagas.filter(v => {
+      if (statusFilter !== 'all' && v.status !== statusFilter) return false;
+      if (search && !v.title.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+  }, [vagas, search, statusFilter]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -71,6 +82,33 @@ const VagasPage = () => {
         </Button>
       </div>
 
+      {/* Busca e filtros */}
+      {vagas.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar vaga..."
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-1">
+            {(['all', 'active', 'inactive'] as const).map(s => (
+              <Button
+                key={s}
+                size="sm"
+                variant={statusFilter === s ? 'default' : 'outline'}
+                onClick={() => setStatusFilter(s)}
+              >
+                {s === 'all' ? 'Todas' : s === 'active' ? 'Ativas' : 'Inativas'}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {vagas.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed bg-card py-16">
           <div className="rounded-full bg-muted p-4 mb-4">
@@ -80,9 +118,15 @@ const VagasPage = () => {
           <p className="text-sm text-muted-foreground mb-4">Comece criando sua primeira vaga</p>
           <Button onClick={() => setCreateOpen(true)}>Criar Nova Vaga</Button>
         </div>
+      ) : filteredVagas.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed bg-card py-12 text-center">
+          <Search className="h-8 w-8 text-muted-foreground/40 mb-3" />
+          <p className="text-sm text-muted-foreground">Nenhuma vaga encontrada para "<strong>{search}</strong>"</p>
+          <button onClick={() => { setSearch(''); setStatusFilter('all'); }} className="text-xs text-primary hover:underline mt-2">Limpar filtros</button>
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {vagas.map(vaga => (
+          {filteredVagas.map(vaga => (
             <div key={vaga.id} className="rounded-xl border bg-card p-5 space-y-3 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <h3 className="font-semibold text-foreground leading-tight">{vaga.title}</h3>

@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Briefcase, Users, Settings, LayoutDashboard, LogOut, Loader2 } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Briefcase, Users, Settings, LayoutDashboard, LogOut, Loader2, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppState } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -14,8 +14,10 @@ const navItems = [
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { loading } = useAppState();
+  const { loading, candidates } = useAppState();
+  const newCount = candidates.filter(c => c.status === 'Novo').length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,14 +50,29 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               })}
             </nav>
             {user && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={signOut} className="ml-2 text-muted-foreground hover:text-foreground">
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Sair</TooltipContent>
-              </Tooltip>
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/candidatos')} className="relative text-muted-foreground hover:text-foreground">
+                      <Bell className="h-4 w-4" />
+                      {newCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
+                          {newCount > 9 ? '9+' : newCount}
+                        </span>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{newCount > 0 ? `${newCount} candidato${newCount !== 1 ? 's' : ''} aguardando triagem` : 'Notificações'}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-foreground">
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sair</TooltipContent>
+                </Tooltip>
+              </>
             )}
           </div>
         </div>

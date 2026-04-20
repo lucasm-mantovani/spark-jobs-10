@@ -3,7 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAppState } from '@/contexts/AppContext';
-import { ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowUpDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import CandidateFilters, { type Filters } from '@/components/CandidateFilters';
 import CandidateDetailPanel from '@/components/CandidateDetailPanel';
 import type { Candidate, CandidateStatus } from '@/types';
@@ -73,6 +74,28 @@ const CandidatosPage = () => {
     ? candidates.find(c => c.id === selectedCandidate.id) ?? null
     : null;
 
+  const exportCSV = () => {
+    if (filtered.length === 0) { toast.error('Nenhum candidato para exportar'); return; }
+    const headers = ['Nome', 'Email', 'Telefone', 'LinkedIn', 'Vaga', 'Status', 'Score IA', 'Data', 'PCD', 'Pretensão Salarial', 'Disponibilidade'];
+    const rows = filtered.map(c => [
+      c.name, c.email, c.phone ?? '', c.linkedin ?? '', c.vaga_title, c.status,
+      Object.values(c.ai_scores ?? {}).length > 0
+        ? Math.round(Object.values(c.ai_scores!).reduce((a, b) => a + b, 0) / Object.values(c.ai_scores!).length) + '%'
+        : '',
+      new Date(c.created_at).toLocaleDateString('pt-BR'),
+      c.answers['__pcd'] ?? '',
+      c.answers['__pretensao_salarial'] ?? '',
+      c.answers['__disponibilidade'] ?? '',
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `candidatos-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} candidatos exportados`);
+  };
+
   const SortHeader = ({ label, sortId }: { label: string; sortId: SortKey }) => (
     <TableHead>
       <button onClick={() => toggleSort(sortId)} className="flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors">
@@ -84,11 +107,16 @@ const CandidatosPage = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Candidatos</h1>
-        <p className="text-sm text-muted-foreground">
-          {filtered.length} candidato{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Candidatos</h1>
+          <p className="text-sm text-muted-foreground">
+            {filtered.length} candidato{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={exportCSV} disabled={filtered.length === 0}>
+          <Download className="h-4 w-4" /> Exportar CSV
+        </Button>
       </div>
 
       <div className="flex gap-6 items-start">
