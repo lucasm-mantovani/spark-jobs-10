@@ -7,12 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, Sparkles, Loader2, GripVertical, Eye, Bookmark } from 'lucide-react';
+import { Plus, Trash2, Sparkles, Loader2, GripVertical, Eye, Bookmark, Library, Check } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Vaga, FormQuestion, FieldType, HiringModel, CandidateStatus } from '@/types';
 import { ALL_STATUSES } from '@/types';
 import { useAppState } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { QUESTION_BANK } from '@/lib/questionBank';
 
 const TEMPLATES_KEY = 'safie_vaga_templates';
 
@@ -45,6 +48,8 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
   const templates: any[] = JSON.parse(localStorage.getItem(TEMPLATES_KEY) ?? '[]');
   const dragItem = useRef<number | null>(null);
   const dragOver = useRef<number | null>(null);
@@ -89,6 +94,16 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
       ...prev,
       { id: crypto.randomUUID(), label: '', type: 'short_text', required: true },
     ]);
+  };
+
+  const addFromBank = (suggested: { label: string; type: FieldType; options?: string[]; scaleMin?: number; scaleMax?: number }) => {
+    const key = suggested.label;
+    setQuestions(prev => [
+      ...prev,
+      { id: crypto.randomUUID(), label: suggested.label, type: suggested.type, options: suggested.options, scaleMin: suggested.scaleMin, scaleMax: suggested.scaleMax, required: true },
+    ]);
+    setRecentlyAdded(prev => new Set(prev).add(key));
+    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(key); return n; }), 2000);
   };
 
   const updateQuestion = (id: string, updates: Partial<FormQuestion>) => {
@@ -247,8 +262,11 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
                       <Eye className="h-4 w-4" /> Preview
                     </Button>
                   )}
+                  <Button size="sm" variant="outline" onClick={() => setBankOpen(true)}>
+                    <Library className="h-4 w-4" /> Banco de perguntas
+                  </Button>
                   <Button size="sm" variant="outline" onClick={addQuestion}>
-                    <Plus className="h-4 w-4" /> Adicionar
+                    <Plus className="h-4 w-4" /> Em branco
                   </Button>
                 </div>
               </div>
@@ -350,6 +368,58 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
               </button>
             ))}
           </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Banco de Perguntas */}
+      <Sheet open={bankOpen} onOpenChange={setBankOpen}>
+        <SheetContent className="w-full sm:max-w-lg flex flex-col">
+          <SheetHeader className="pb-3">
+            <SheetTitle className="flex items-center gap-2">
+              <Library className="h-5 w-5" /> Banco de Perguntas
+            </SheetTitle>
+            <p className="text-xs text-muted-foreground">Clique em uma pergunta para adicioná-la ao formulário. Você pode editá-la depois.</p>
+          </SheetHeader>
+          <Tabs defaultValue={QUESTION_BANK[0].id} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid grid-cols-3 h-auto flex-wrap gap-1 bg-transparent p-0 mb-2">
+              {QUESTION_BANK.map(cat => (
+                <TabsTrigger key={cat.id} value={cat.id} className="text-xs px-2 py-1.5 border rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  {cat.emoji} {cat.label.split(' ')[0]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {QUESTION_BANK.map(cat => (
+              <TabsContent key={cat.id} value={cat.id} className="flex-1 min-h-0 mt-0">
+                <ScrollArea className="h-[calc(100vh-220px)]">
+                  <div className="space-y-2 pr-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-1">
+                      {cat.emoji} {cat.label} — {cat.questions.length} sugestões
+                    </p>
+                    {cat.questions.map((q, i) => {
+                      const added = recentlyAdded.has(q.label);
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => addFromBank(q)}
+                          className={`w-full text-left rounded-lg border p-3 transition-all ${added ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : 'bg-card hover:bg-muted/60 hover:border-primary/40'}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm leading-snug">{q.label}</p>
+                            <span className={`shrink-0 rounded-full p-1 transition-colors ${added ? 'bg-green-500 text-white' : 'bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground'}`}>
+                              {added ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {q.type === 'long_text' ? 'Resposta longa' : q.type === 'short_text' ? 'Resposta curta' : q.type === 'multiple_choice' ? `Múltipla escolha (${q.options?.length} opções)` : q.type === 'scale' ? 'Escala' : q.type}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            ))}
+          </Tabs>
         </SheetContent>
       </Sheet>
 
