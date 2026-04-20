@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check, MoreHorizontal, Search } from 'lucide-react';
+import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check, MoreHorizontal, Search, Share2, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -22,8 +22,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+const TEMPLATES_KEY = 'safie_vaga_templates';
 
 const VagasPage = () => {
   const { vagas, updateVaga, candidates } = useAppState();
@@ -61,6 +64,24 @@ const VagasPage = () => {
 
   const candidateCount = (vagaId: string) =>
     candidates.filter(c => c.vaga_id === vagaId).length;
+
+  const saveAsTemplate = (vaga: Vaga) => {
+    const templates = JSON.parse(localStorage.getItem(TEMPLATES_KEY) ?? '[]');
+    const template = { id: crypto.randomUUID(), title: vaga.title, description: vaga.description, requirements: vaga.requirements, behavioral_criteria: vaga.behavioral_criteria, hiring_model: vaga.hiring_model, salary_min: vaga.salary_min, salary_max: vaga.salary_max, questions: vaga.questions };
+    templates.push(template);
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+    toast.success(`"${vaga.title}" salva como template`);
+  };
+
+  const shareWhatsApp = (vagaId: string, title: string) => {
+    const url = `${window.location.origin}/formulario/${vagaId}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(`Estamos com uma vaga aberta: ${title}\nCandidate-se aqui: ${url}`)}`);
+  };
+
+  const shareLinkedIn = (vagaId: string) => {
+    const url = `${window.location.origin}/formulario/${vagaId}`;
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`);
+  };
 
   const filteredVagas = useMemo(() => {
     return vagas.filter(v => {
@@ -170,6 +191,17 @@ const VagasPage = () => {
                     <DropdownMenuItem onClick={() => { setEditVaga(vaga); setCreateOpen(true); }}>
                       <Edit2 className="h-3 w-3 mr-2" /> Editar
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => saveAsTemplate(vaga)}>
+                      <Bookmark className="h-3 w-3 mr-2" /> Salvar como template
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => shareWhatsApp(vaga.id, vaga.title)}>
+                      <Share2 className="h-3 w-3 mr-2" /> Compartilhar no WhatsApp
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => shareLinkedIn(vaga.id)}>
+                      <Share2 className="h-3 w-3 mr-2" /> Compartilhar no LinkedIn
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => toggleStatus(vaga)}>
                       {vaga.status === 'active'
                         ? <><ToggleRight className="h-3 w-3 mr-2" /> Desativar</>

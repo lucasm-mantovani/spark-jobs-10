@@ -7,11 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, Sparkles, Loader2, GripVertical, Eye } from 'lucide-react';
+import { Plus, Trash2, Sparkles, Loader2, GripVertical, Eye, Bookmark } from 'lucide-react';
 import type { Vaga, FormQuestion, FieldType, HiringModel } from '@/types';
 import { useAppState } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+const TEMPLATES_KEY = 'safie_vaga_templates';
 
 const fieldTypeLabels: Record<FieldType, string> = {
   short_text: 'Texto curto',
@@ -40,6 +42,8 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
   const [aiSuggestions, setAiSuggestions] = useState('');
   const [loadingAi, setLoadingAi] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const templates: any[] = JSON.parse(localStorage.getItem(TEMPLATES_KEY) ?? '[]');
   const dragItem = useRef<number | null>(null);
   const dragOver = useRef<number | null>(null);
 
@@ -136,7 +140,14 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
       <Dialog open={open} onOpenChange={() => onClose()}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editVaga ? 'Editar Vaga' : 'Criar Nova Vaga'}</DialogTitle>
+            <div className="flex items-center justify-between pr-6">
+              <DialogTitle>{editVaga ? 'Editar Vaga' : 'Criar Nova Vaga'}</DialogTitle>
+              {!editVaga && templates.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => setTemplatesOpen(true)}>
+                  <Bookmark className="h-3 w-3 mr-1" /> Usar template ({templates.length})
+                </Button>
+              )}
+            </div>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
@@ -278,6 +289,33 @@ const CreateVagaModal: React.FC<Props> = ({ open, onClose, editVaga }) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Templates */}
+      <Sheet open={templatesOpen} onOpenChange={setTemplatesOpen}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Templates salvos</SheetTitle>
+            <p className="text-xs text-muted-foreground">Clique em um template para carregar seus dados</p>
+          </SheetHeader>
+          <div className="space-y-3">
+            {templates.map((t: any) => (
+              <button
+                key={t.id}
+                className="w-full text-left rounded-lg border bg-card p-4 hover:bg-muted/50 transition-colors space-y-1"
+                onClick={() => {
+                  setTitle(t.title); setDescription(t.description); setRequirements(t.requirements);
+                  setBehavioral(t.behavioral_criteria); setHiringModel(t.hiring_model);
+                  setSalaryMin(t.salary_min); setSalaryMax(t.salary_max); setQuestions(t.questions ?? []);
+                  setTemplatesOpen(false);
+                }}
+              >
+                <p className="font-medium text-sm">{t.title}</p>
+                <p className="text-xs text-muted-foreground">{t.hiring_model} · {t.questions?.length ?? 0} {(t.questions?.length ?? 0) === 1 ? 'pergunta' : 'perguntas'}</p>
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Preview do formulário */}
       <Sheet open={previewOpen} onOpenChange={setPreviewOpen}>

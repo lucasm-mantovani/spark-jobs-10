@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useAppState } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2 } from 'lucide-react';
+import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2, Star } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Candidate, CandidateStatus } from '@/types';
 import { ALL_STATUSES } from '@/types';
@@ -31,7 +31,7 @@ const statusColors: Record<CandidateStatus, string> = {
 };
 
 const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
-  const { updateCandidateStatus, addCandidateNote, deleteCandidate, vagas } = useAppState();
+  const { updateCandidateStatus, addCandidateNote, deleteCandidate, vagas, updateCandidate } = useAppState();
   const [newNote, setNewNote] = useState('');
   const [showInterview, setShowInterview] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
@@ -61,6 +61,16 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
   const handleReject = () => {
     updateCandidateStatus(candidate.id, 'Rejeitado');
     toast.success('Candidato rejeitado');
+  };
+
+  const isBancoTalentos = candidate.answers?.['__banco_talentos'] === 'true';
+  const toggleBancoTalentos = () => {
+    const newVal = isBancoTalentos ? undefined : 'true';
+    const updatedAnswers = { ...candidate.answers };
+    if (newVal) updatedAnswers['__banco_talentos'] = newVal;
+    else delete updatedAnswers['__banco_talentos'];
+    updateCandidate(candidate.id, { answers: updatedAnswers });
+    toast.success(newVal ? 'Adicionado ao banco de talentos' : 'Removido do banco de talentos');
   };
 
   const handleDelete = async () => {
@@ -117,6 +127,9 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
                 <XCircle className="h-3 w-3" /> Rejeitar
               </Button>
             )}
+            <Button size="sm" variant={isBancoTalentos ? 'default' : 'outline'} className={isBancoTalentos ? 'bg-yellow-500 hover:bg-yellow-600' : ''} onClick={toggleBancoTalentos}>
+              <Star className="h-3 w-3" /> {isBancoTalentos ? 'No banco' : 'Banco de talentos'}
+            </Button>
             <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={() => setShowDeleteConfirm(true)}>
               <Trash2 className="h-3 w-3" /> Excluir
             </Button>

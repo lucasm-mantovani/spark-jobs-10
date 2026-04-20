@@ -30,7 +30,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <span className="text-xl font-bold text-foreground tracking-tight">SAFIE</span>
           </Link>
           <div className="flex items-center gap-1">
-            <nav className="flex items-center gap-1">
+            {/* Nav desktop */}
+            <nav className="hidden md:flex items-center gap-1">
               {navItems.map(({ to, label, icon: Icon }) => {
                 const active = location.pathname.startsWith(to);
                 return (
@@ -44,7 +45,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{label}</span>
+                    <span>{label}</span>
                   </Link>
                 );
               })}
@@ -77,13 +78,35 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </div>
       </header>
-      <main className="container py-6 animate-fade-in">
+
+      <main className="container py-6 pb-24 md:pb-6 animate-fade-in">
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : children}
       </main>
+
+      {/* Bottom nav mobile */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur-md">
+        <div className="flex items-center justify-around h-16">
+          {navItems.map(({ to, label, icon: Icon }) => {
+            const active = location.pathname.startsWith(to);
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors ${
+                  active ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-[10px] font-medium">{label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 };
