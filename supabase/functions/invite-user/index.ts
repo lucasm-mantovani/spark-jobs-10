@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
     // Invite user via Supabase Auth (sends magic link email)
     const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
       data: { full_name: full_name || "" },
+      redirectTo: 'https://safie-hire.vercel.app/login',
     });
 
     if (error) {
