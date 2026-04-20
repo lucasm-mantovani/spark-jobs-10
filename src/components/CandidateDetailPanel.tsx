@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useAppState } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2, Star, UserCheck } from 'lucide-react';
+import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2, Star, UserCheck, MapPin, GraduationCap } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Candidate, CandidateStatus } from '@/types';
 import { ALL_STATUSES } from '@/types';
@@ -172,10 +172,59 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
                 )}
                 {candidate.linkedin && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Linkedin className="h-4 w-4 text-muted-foreground" />
+                    <Linkedin className="h-4 w-4 text-muted-foreground shrink-0" />
                     <a href={candidate.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                       LinkedIn <ExternalLink className="h-3 w-3" />
                     </a>
+                  </div>
+                )}
+                {(candidate.answers['__estado'] || candidate.answers['__cidade']) && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>
+                      {[candidate.answers['__cidade'], candidate.answers['__estado']].filter(Boolean).join(' — ')}
+                      {candidate.answers['__cep'] && ` · CEP ${candidate.answers['__cep']}`}
+                    </span>
+                  </div>
+                )}
+                {candidate.answers['__data_nascimento'] && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">🎂</span>
+                    <span>{new Date(candidate.answers['__data_nascimento']).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                )}
+                {candidate.answers['__escolaridade'] && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <GraduationCap className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>{candidate.answers['__escolaridade']}</span>
+                  </div>
+                )}
+                {(candidate.answers['__genero'] || candidate.answers['__raca_cor']) && (
+                  <div className="flex flex-wrap gap-2">
+                    {candidate.answers['__genero'] && (
+                      <span className="text-xs rounded-full bg-muted px-2 py-1">{candidate.answers['__genero']}</span>
+                    )}
+                    {candidate.answers['__raca_cor'] && (
+                      <span className="text-xs rounded-full bg-muted px-2 py-1">{candidate.answers['__raca_cor']}</span>
+                    )}
+                  </div>
+                )}
+                {candidate.answers['__regime'] && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">🖥️</span>
+                    <span>{candidate.answers['__regime']}</span>
+                  </div>
+                )}
+                {candidate.answers['__disp_viagem'] && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">✈️</span>
+                    <span>Viagens: {candidate.answers['__disp_viagem']}</span>
+                  </div>
+                )}
+                {candidate.answers['__origem'] && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">📣</span>
+                    <span>Origem: {candidate.answers['__origem']}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm">

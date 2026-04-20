@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Users, Shield, ShieldCheck, Mail, Trash2, Building2, User } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { FORM_FIELDS_KEY, FORM_FIELDS_DEFAULT, FORM_FIELDS_LABELS, FORM_FIELDS_DESCRIPTIONS, getFormFieldsConfig, type FormFieldsConfig } from '@/lib/formFields';
+import { Loader2, UserPlus, Users, Shield, ShieldCheck, Mail, Trash2, Building2, User, ListChecks } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -34,6 +36,7 @@ const Configuracoes = () => {
 
   // Empresa
   const [company, setCompany] = useState<CompanySettings>({ name: 'SAFIE', email: '', website: '', logo: '', primaryColor: '#6366f1' });
+  const [formFields, setFormFields] = useState<FormFieldsConfig>(getFormFieldsConfig());
 
   useEffect(() => {
     const saved = localStorage.getItem(COMPANY_KEY);
@@ -44,6 +47,15 @@ const Configuracoes = () => {
   const saveCompany = () => {
     localStorage.setItem(COMPANY_KEY, JSON.stringify(company));
     toast({ title: 'Configurações da empresa salvas!' });
+  };
+
+  const saveFormFields = () => {
+    localStorage.setItem(FORM_FIELDS_KEY, JSON.stringify(formFields));
+    toast({ title: 'Campos do formulário salvos!' });
+  };
+
+  const toggleField = (key: keyof FormFieldsConfig) => {
+    setFormFields(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const fetchData = async () => {
@@ -129,10 +141,11 @@ const Configuracoes = () => {
       </div>
 
       <Tabs defaultValue={isAdmin ? 'equipe' : 'empresa'}>
-        <TabsList className="w-full grid grid-cols-3">
-          <TabsTrigger value="empresa"><Building2 className="h-4 w-4 mr-1.5" />Empresa</TabsTrigger>
-          <TabsTrigger value="conta"><User className="h-4 w-4 mr-1.5" />Minha Conta</TabsTrigger>
-          <TabsTrigger value="equipe"><Users className="h-4 w-4 mr-1.5" />Equipe</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-4">
+          <TabsTrigger value="empresa"><Building2 className="h-4 w-4 mr-1" />Empresa</TabsTrigger>
+          <TabsTrigger value="formulario"><ListChecks className="h-4 w-4 mr-1" />Formulário</TabsTrigger>
+          <TabsTrigger value="conta"><User className="h-4 w-4 mr-1" />Conta</TabsTrigger>
+          <TabsTrigger value="equipe"><Users className="h-4 w-4 mr-1" />Equipe</TabsTrigger>
         </TabsList>
 
         {/* Empresa */}
@@ -173,6 +186,31 @@ const Configuracoes = () => {
                 <p className="text-xs text-muted-foreground">Cor exibida no cabeçalho do formulário público de candidatura</p>
               </div>
               <Button onClick={saveCompany}>Salvar</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Campos do Formulário */}
+        <TabsContent value="formulario" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Campos do Formulário de Candidatura</CardTitle>
+              <CardDescription>Escolha quais campos extras aparecem em todos os formulários públicos de vaga. Nome, e-mail, telefone e currículo são sempre obrigatórios.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(Object.keys(FORM_FIELDS_DEFAULT) as (keyof FormFieldsConfig)[]).map(key => (
+                <div key={key} className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <p className="text-sm font-medium">{FORM_FIELDS_LABELS[key]}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{FORM_FIELDS_DESCRIPTIONS[key]}</p>
+                  </div>
+                  <Switch
+                    checked={formFields[key]}
+                    onCheckedChange={() => toggleField(key)}
+                  />
+                </div>
+              ))}
+              <Button onClick={saveFormFields} className="w-full">Salvar configuração</Button>
             </CardContent>
           </Card>
         </TabsContent>

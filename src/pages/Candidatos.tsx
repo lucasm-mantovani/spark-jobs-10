@@ -81,16 +81,26 @@ const CandidatosPage = () => {
 
   const exportCSV = () => {
     if (filtered.length === 0) { toast.error('Nenhum candidato para exportar'); return; }
-    const headers = ['Nome', 'Email', 'Telefone', 'LinkedIn', 'Vaga', 'Status', 'Score IA', 'Data', 'PCD', 'Pretensão Salarial', 'Disponibilidade'];
+    const headers = ['Nome', 'Email', 'Telefone', 'LinkedIn', 'Vaga', 'Status', 'Score IA', 'Data Candidatura', 'Nascimento', 'Estado', 'Cidade', 'CEP', 'Escolaridade', 'Gênero', 'Raça/Cor', 'Regime Preferido', 'Disp. Viagens', 'PCD', 'Pretensão Salarial', 'Disponibilidade', 'Origem'];
     const rows = filtered.map(c => [
       c.name, c.email, c.phone ?? '', c.linkedin ?? '', c.vaga_title, c.status,
       Object.values(c.ai_scores ?? {}).length > 0
         ? Math.round(Object.values(c.ai_scores!).reduce((a, b) => a + b, 0) / Object.values(c.ai_scores!).length) + '%'
         : '',
       new Date(c.created_at).toLocaleDateString('pt-BR'),
+      c.answers['__data_nascimento'] ? new Date(c.answers['__data_nascimento']).toLocaleDateString('pt-BR') : '',
+      c.answers['__estado'] ?? '',
+      c.answers['__cidade'] ?? '',
+      c.answers['__cep'] ?? '',
+      c.answers['__escolaridade'] ?? '',
+      c.answers['__genero'] ?? '',
+      c.answers['__raca_cor'] ?? '',
+      c.answers['__regime'] ?? '',
+      c.answers['__disp_viagem'] ?? '',
       c.answers['__pcd'] ?? '',
       c.answers['__pretensao_salarial'] ?? '',
       c.answers['__disponibilidade'] ?? '',
+      c.answers['__origem'] ?? '',
     ]);
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { CheckCircle2, Upload } from 'lucide-react';
 import type { Vaga } from '@/types';
+import { getFormFieldsConfig, BR_STATES, ESCOLARIDADE_OPTIONS, GENERO_OPTIONS, RACA_COR_OPTIONS } from '@/lib/formFields';
 
 const FIXED_LABELS = ['nome', 'nome completo', 'email', 'e-mail', 'telefone', 'celular', 'linkedin', 'currículo', 'curriculo', 'cv'];
 const COMPANY_KEY = 'safie_company_settings';
@@ -29,11 +30,21 @@ const PublicForm = () => {
   const [pcd, setPcd] = useState('');
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [origem, setOrigem] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [estado, setEstado] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [cep, setCep] = useState('');
+  const [escolaridade, setEscolaridade] = useState('');
+  const [genero, setGenero] = useState('');
+  const [racaCor, setRacaCor] = useState('');
+  const [dispViagem, setDispViagem] = useState('');
+  const [regime, setRegime] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const company = JSON.parse(localStorage.getItem(COMPANY_KEY) ?? '{}') as { name?: string; logo?: string; primaryColor?: string };
+  const fieldsConfig = getFormFieldsConfig();
 
   useEffect(() => {
     if (!id) return;
@@ -106,6 +117,15 @@ const PublicForm = () => {
     if (availability) extraAnswers['__disponibilidade'] = availability;
     if (pcd) extraAnswers['__pcd'] = pcd;
     if (origem) extraAnswers['__origem'] = origem;
+    if (dataNascimento) extraAnswers['__data_nascimento'] = dataNascimento;
+    if (estado) extraAnswers['__estado'] = estado;
+    if (cidade) extraAnswers['__cidade'] = cidade;
+    if (cep) extraAnswers['__cep'] = cep;
+    if (escolaridade) extraAnswers['__escolaridade'] = escolaridade;
+    if (genero) extraAnswers['__genero'] = genero;
+    if (racaCor) extraAnswers['__raca_cor'] = racaCor;
+    if (dispViagem) extraAnswers['__disp_viagem'] = dispViagem;
+    if (regime) extraAnswers['__regime'] = regime;
 
     setSubmitting(true);
     try {
@@ -190,6 +210,56 @@ const PublicForm = () => {
               </div>
             </div>
 
+            {/* Data de nascimento */}
+            {fieldsConfig.dataNascimento && (
+              <div>
+                <Label>Data de nascimento</Label>
+                <Input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} />
+              </div>
+            )}
+
+            {/* Localização */}
+            {(fieldsConfig.estado || fieldsConfig.cidade || fieldsConfig.cep) && (
+              <div className="grid gap-4 sm:grid-cols-3">
+                {fieldsConfig.estado && (
+                  <div>
+                    <Label>Estado (UF)</Label>
+                    <Select value={estado} onValueChange={setEstado}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        {BR_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {fieldsConfig.cidade && (
+                  <div className={fieldsConfig.cep ? '' : 'sm:col-span-2'}>
+                    <Label>Cidade</Label>
+                    <Input value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Ex: São Paulo" />
+                  </div>
+                )}
+                {fieldsConfig.cep && (
+                  <div>
+                    <Label>CEP</Label>
+                    <Input value={cep} onChange={e => setCep(e.target.value)} placeholder="00000-000" maxLength={9} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Escolaridade */}
+            {fieldsConfig.escolaridade && (
+              <div>
+                <Label>Escolaridade</Label>
+                <Select value={escolaridade} onValueChange={setEscolaridade}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {ESCOLARIDADE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Currículo */}
             <div>
               <Label>Currículo (PDF)</Label>
@@ -234,6 +304,62 @@ const PublicForm = () => {
                 </Select>
               </div>
             </div>
+
+            {/* Disponibilidade para viagens */}
+            {fieldsConfig.dispViagem && (
+              <div className="space-y-2">
+                <Label>Disponibilidade para viagens</Label>
+                <RadioGroup value={dispViagem} onValueChange={setDispViagem} className="flex gap-6">
+                  {['Sim', 'Não', 'Eventualmente'].map(v => (
+                    <div key={v} className="flex items-center gap-2">
+                      <RadioGroupItem value={v} id={`viagem-${v}`} />
+                      <Label htmlFor={`viagem-${v}`} className="font-normal">{v}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Regime preferido */}
+            {fieldsConfig.regime && (
+              <div>
+                <Label>Regime de trabalho preferido</Label>
+                <Select value={regime} onValueChange={setRegime}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {['Presencial', 'Remoto', 'Híbrido', 'Sem preferência'].map(o => (
+                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Gênero */}
+            {fieldsConfig.genero && (
+              <div>
+                <Label>Gênero <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
+                <Select value={genero} onValueChange={setGenero}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {GENERO_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Raça/Cor */}
+            {fieldsConfig.racaCor && (
+              <div>
+                <Label>Raça/Cor <span className="text-xs text-muted-foreground font-normal">(voluntário, conforme IBGE)</span></Label>
+                <Select value={racaCor} onValueChange={setRacaCor}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {RACA_COR_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Origem / referral */}
             <div className="space-y-1.5">
