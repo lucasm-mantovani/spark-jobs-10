@@ -1,5 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -15,15 +13,18 @@ Deno.serve(async (req) => {
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
-      throw new Error("ANTHROPIC_API_KEY não configurada nos secrets do Supabase.");
+      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY não configurada" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const prompt = `Você é um especialista em recrutamento e seleção. Gere 5 perguntas objetivas para o formulário de candidatura da vaga abaixo.
 
-Vaga: ${title}
-Descrição: ${description}
-Requisitos técnicos: ${requirements}
-Critérios comportamentais: ${behavioral_criteria}
+Vaga: ${title ?? ''}
+Descrição: ${description ?? ''}
+Requisitos técnicos: ${requirements ?? ''}
+Critérios comportamentais: ${behavioral_criteria ?? ''}
 
 Regras:
 - As perguntas devem ser diretas e fáceis de responder por escrito
@@ -45,12 +46,16 @@ Regras:
       }),
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Erro na API Anthropic: ${err}`);
+      return new Response(JSON.stringify({ error: `Anthropic error ${response.status}: ${responseText}` }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     const text = data.content[0].text as string;
     const questions = text
       .split("\n")
@@ -60,8 +65,9 @@ Regras:
     return new Response(JSON.stringify({ questions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
