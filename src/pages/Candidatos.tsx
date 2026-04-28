@@ -3,7 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAppState } from '@/contexts/AppContext';
-import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Star } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Star, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +12,7 @@ import CandidateFilters, { type Filters } from '@/components/CandidateFilters';
 import CandidateDetailPanel from '@/components/CandidateDetailPanel';
 import type { Candidate, CandidateStatus } from '@/types';
 import { ALL_STATUSES } from '@/types';
+import { useSearchParams } from 'react-router-dom';
 
 const statusColors: Record<CandidateStatus, string> = {
   Novo: 'bg-primary',
@@ -27,8 +29,12 @@ const PAGE_SIZE = 10;
 
 const CandidatosPage = () => {
   const { candidates, vagas, updateCandidateStatus } = useAppState();
-  const [filters, setFilters] = useState<Filters>({ vagaId: 'all', statuses: [], keyword: '' });
+  const { isAdmin } = useAuth();
+  const [searchParams] = useSearchParams();
+  const vagaParam = searchParams.get('vaga') ?? 'all';
+  const [filters, setFilters] = useState<Filters>({ vagaId: vagaParam, statuses: [], keyword: '' });
   const [onlyTalentos, setOnlyTalentos] = useState(false);
+  const [onlyIndicados, setOnlyIndicados] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
@@ -51,6 +57,7 @@ const CandidatosPage = () => {
         if (new Date(c.created_at) > end) return false;
       }
       if (onlyTalentos && c.answers?.['__banco_talentos'] !== 'true') return false;
+      if (onlyIndicados && !c.answers?.['__indicado_por']) return false;
       if (filters.keyword) {
         const kw = filters.keyword.toLowerCase();
         const inAnswers = Object.values(c.answers).some(a => a.toLowerCase().includes(kw));
@@ -69,7 +76,7 @@ const CandidatosPage = () => {
     });
 
     return result;
-  }, [candidates, filters, sortKey, sortDir, onlyTalentos]);
+  }, [candidates, filters, sortKey, sortDir, onlyTalentos, onlyIndicados]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -129,16 +136,24 @@ const CandidatosPage = () => {
             {filtered.length} candidato{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           <div className="flex items-center gap-2">
             <Switch checked={onlyTalentos} onCheckedChange={setOnlyTalentos} id="talentos" />
             <label htmlFor="talentos" className="text-sm text-muted-foreground flex items-center gap-1 cursor-pointer">
               <Star className="h-3 w-3 text-yellow-500" /> Banco de talentos
             </label>
           </div>
-          <Button size="sm" variant="outline" onClick={exportCSV} disabled={filtered.length === 0}>
-            <Download className="h-4 w-4" /> Exportar CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Switch checked={onlyIndicados} onCheckedChange={setOnlyIndicados} id="indicados" />
+            <label htmlFor="indicados" className="text-sm text-muted-foreground flex items-center gap-1 cursor-pointer">
+              <UserCheck className="h-3 w-3 text-blue-500" /> Indicados
+            </label>
+          </div>
+          {isAdmin && (
+            <Button size="sm" variant="outline" onClick={exportCSV} disabled={filtered.length === 0}>
+              <Download className="h-4 w-4" /> Exportar CSV
+            </Button>
+          )}
         </div>
       </div>
 

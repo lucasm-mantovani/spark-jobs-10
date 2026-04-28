@@ -5,18 +5,19 @@ import { useAppState } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-const navItems = [
-  { to: '/vagas', label: 'Vagas', icon: Briefcase },
-  { to: '/candidatos', label: 'Candidatos', icon: Users },
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/configuracoes', label: 'Configurações', icon: Settings },
+const allNavItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
+  { to: '/vagas', label: 'Vagas', icon: Briefcase, adminOnly: false },
+  { to: '/candidatos', label: 'Candidatos', icon: Users, adminOnly: false },
+  { to: '/configuracoes', label: 'Configurações', icon: Settings, adminOnly: true },
 ];
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const { loading, candidates } = useAppState();
+  const navItems = allNavItems.filter(item => !item.adminOnly || isAdmin);
   const newCount = candidates.filter(c => c.status === 'Novo').length;
 
   return (

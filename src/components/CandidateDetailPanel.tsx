@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useAppState } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2, Star, UserCheck, MapPin, GraduationCap } from 'lucide-react';
+import { Mail, FileText, MessageSquare, Clock, Calendar, ClipboardCheck, ExternalLink, XCircle, User, Linkedin, Trash2, Star, UserCheck, MapPin, GraduationCap, UserPlus } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Candidate, CandidateStatus } from '@/types';
 import { ALL_STATUSES } from '@/types';
@@ -17,6 +17,8 @@ import SendEmailModal from './SendEmailModal';
 import AssignTestModal from './AssignTestModal';
 import AdmissaoPanel from './AdmissaoPanel';
 import ScorecardModal from './ScorecardModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
 
 interface Props {
   candidate: Candidate | null;
@@ -34,7 +36,10 @@ const statusColors: Record<CandidateStatus, string> = {
 
 const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
   const { updateCandidateStatus, addCandidateNote, deleteCandidate, vagas, updateCandidate } = useAppState();
+  const { isAdmin } = useAuth();
   const [newNote, setNewNote] = useState('');
+  const [indicadoPor, setIndicadoPor] = useState('');
+  const [editingIndicacao, setEditingIndicacao] = useState(false);
   const [showInterview, setShowInterview] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showTest, setShowTest] = useState(false);
@@ -144,9 +149,11 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
                 <UserCheck className="h-3 w-3" /> Admissão
               </Button>
             )}
-            <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={() => setShowDeleteConfirm(true)}>
-              <Trash2 className="h-3 w-3" /> Excluir
-            </Button>
+            {isAdmin && (
+              <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={() => setShowDeleteConfirm(true)}>
+                <Trash2 className="h-3 w-3" /> Excluir
+              </Button>
+            )}
           </div>
 
           <Tabs defaultValue="info" className="pt-4">
@@ -227,6 +234,37 @@ const CandidateDetailPanel: React.FC<Props> = ({ candidate, onClose }) => {
                     <span>Origem: {candidate.answers['__origem']}</span>
                   </div>
                 )}
+                {/* Indicado por */}
+                <div className="flex items-start gap-2 text-sm">
+                  <UserPlus className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  {editingIndicacao ? (
+                    <div className="flex gap-2 flex-1">
+                      <Input
+                        value={indicadoPor}
+                        onChange={e => setIndicadoPor(e.target.value)}
+                        placeholder="Nome de quem indicou"
+                        className="h-7 text-sm flex-1"
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 text-xs px-2" onClick={() => {
+                        const updated = { ...candidate.answers };
+                        if (indicadoPor.trim()) updated['__indicado_por'] = indicadoPor.trim();
+                        else delete updated['__indicado_por'];
+                        updateCandidate(candidate.id, { answers: updated });
+                        setEditingIndicacao(false);
+                        toast.success('Indicação salva');
+                      }}>Salvar</Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={() => { setEditingIndicacao(false); setIndicadoPor(candidate.answers['__indicado_por'] ?? ''); }}>Cancelar</Button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setIndicadoPor(candidate.answers['__indicado_por'] ?? ''); setEditingIndicacao(true); }}
+                      className="text-left hover:text-primary transition-colors">
+                      {candidate.answers['__indicado_por']
+                        ? <span>Indicado por <strong>{candidate.answers['__indicado_por']}</strong></span>
+                        : <span className="text-muted-foreground italic">Adicionar indicação</span>}
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span>Inscrito em {new Date(candidate.created_at).toLocaleDateString('pt-BR')}</span>

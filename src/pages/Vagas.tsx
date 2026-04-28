@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check, MoreHorizontal, Search, Share2, Bookmark } from 'lucide-react';
+import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, Users, Copy, Check, MoreHorizontal, Search, Share2, Bookmark, Megaphone, ExternalLink, ClipboardCopy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAppState } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import CreateVagaModal from '@/components/CreateVagaModal';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Vaga } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,14 +31,36 @@ import {
 
 const TEMPLATES_KEY = 'safie_vaga_templates';
 
+const portals = [
+  { name: 'LinkedIn Jobs', url: (link: string) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`, color: '#0A66C2' },
+  { name: 'Indeed', url: (link: string) => `https://www.indeed.com/job/post?url=${encodeURIComponent(link)}`, color: '#003A9B' },
+  { name: 'Infojobs', url: (_link: string) => `https://www.infojobs.com.br/empresas/publicar-vaga.aspx`, color: '#FF6600' },
+  { name: 'Catho', url: (_link: string) => `https://www.catho.com.br/empresas/publicar-vaga/`, color: '#E30613' },
+  { name: 'Gupy', url: (_link: string) => `https://app.gupy.io/`, color: '#6D28D9' },
+  { name: 'Trampos', url: (link: string) => `https://trampos.co/vagas/publicar?url=${encodeURIComponent(link)}`, color: '#1A1A1A' },
+];
+
+const formatJobText = (vaga: Vaga, formLink: string) => {
+  const lines: string[] = [];
+  lines.push(`🚀 ${vaga.title}`);
+  if (vaga.description) lines.push(`\n${vaga.description}`);
+  if (vaga.requirements) lines.push(`\n📋 Requisitos:\n${vaga.requirements}`);
+  if (vaga.hiring_model) lines.push(`\n📍 Modelo: ${vaga.hiring_model}`);
+  if (vaga.salary_min > 0 && vaga.salary_max > 0) lines.push(`💰 Salário: R$ ${vaga.salary_min.toLocaleString()} – R$ ${vaga.salary_max.toLocaleString()}`);
+  lines.push(`\n🔗 Candidate-se: ${formLink}`);
+  return lines.join('\n');
+};
+
 const VagasPage = () => {
   const { vagas, updateVaga, candidates } = useAppState();
+  const { isAdmin } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
   const [editVaga, setEditVaga] = useState<Vaga | undefined>();
   const [confirmVaga, setConfirmVaga] = useState<Vaga | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [divulgarVaga, setDivulgarVaga] = useState<Vaga | null>(null);
   const navigate = useNavigate();
 
   const copyFormLink = (vagaId: string) => {
@@ -98,9 +123,11 @@ const VagasPage = () => {
           <h1 className="text-2xl font-bold text-foreground">Vagas</h1>
           <p className="text-sm text-muted-foreground">Gerencie suas vagas de emprego e formulários</p>
         </div>
-        <Button onClick={() => { setEditVaga(undefined); setCreateOpen(true); }}>
-          <Plus className="h-4 w-4" /> Criar Nova Vaga
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => { setEditVaga(undefined); setCreateOpen(true); }}>
+            <Plus className="h-4 w-4" /> Criar Nova Vaga
+          </Button>
+        )}
       </div>
 
       {/* Busca e filtros */}
@@ -165,7 +192,7 @@ const VagasPage = () => {
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Users className="h-3 w-3" />
                 <button
-                  onClick={() => navigate(`/vagas/${vaga.id}`)}
+                  onClick={() => navigate(`/candidatos?vaga=${vaga.id}`)}
                   className="hover:text-primary hover:underline transition-colors"
                 >
                   {candidateCount(vaga.id)} {candidateCount(vaga.id) === 1 ? 'candidato' : 'candidatos'}
@@ -188,25 +215,36 @@ const VagasPage = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => { setEditVaga(vaga); setCreateOpen(true); }}>
-                      <Edit2 className="h-3 w-3 mr-2" /> Editar
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuItem onClick={() => { setEditVaga(vaga); setCreateOpen(true); }}>
+                          <Edit2 className="h-3 w-3 mr-2" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => saveAsTemplate(vaga)}>
+                          <Bookmark className="h-3 w-3 mr-2" /> Salvar como template
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    <DropdownMenuItem onClick={() => setDivulgarVaga(vaga)}>
+                      <Megaphone className="h-3 w-3 mr-2" /> Divulgar vaga
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => saveAsTemplate(vaga)}>
-                      <Bookmark className="h-3 w-3 mr-2" /> Salvar como template
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => shareWhatsApp(vaga.id, vaga.title)}>
-                      <Share2 className="h-3 w-3 mr-2" /> Compartilhar no WhatsApp
+                      <Share2 className="h-3 w-3 mr-2" /> WhatsApp
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => shareLinkedIn(vaga.id)}>
-                      <Share2 className="h-3 w-3 mr-2" /> Compartilhar no LinkedIn
+                      <Share2 className="h-3 w-3 mr-2" /> LinkedIn
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => toggleStatus(vaga)}>
-                      {vaga.status === 'active'
-                        ? <><ToggleRight className="h-3 w-3 mr-2" /> Desativar</>
-                        : <><ToggleLeft className="h-3 w-3 mr-2" /> Ativar</>}
-                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => toggleStatus(vaga)}>
+                          {vaga.status === 'active'
+                            ? <><ToggleRight className="h-3 w-3 mr-2" /> Desativar</>
+                            : <><ToggleLeft className="h-3 w-3 mr-2" /> Ativar</>}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -220,6 +258,43 @@ const VagasPage = () => {
         onClose={() => { setCreateOpen(false); setEditVaga(undefined); }}
         editVaga={editVaga}
       />
+
+      {/* Modal Divulgar */}
+      <Dialog open={!!divulgarVaga} onOpenChange={() => setDivulgarVaga(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Divulgar — {divulgarVaga?.title}</DialogTitle>
+          </DialogHeader>
+          {divulgarVaga && (() => {
+            const link = `${window.location.origin}/formulario/${divulgarVaga.id}`;
+            const text = formatJobText(divulgarVaga, link);
+            return (
+              <Tabs defaultValue="portais">
+                <TabsList className="w-full">
+                  <TabsTrigger value="portais" className="flex-1">Portais</TabsTrigger>
+                  <TabsTrigger value="texto" className="flex-1">Texto formatado</TabsTrigger>
+                </TabsList>
+                <TabsContent value="portais" className="space-y-2 pt-2">
+                  {portals.map(p => (
+                    <a key={p.name} href={p.url(link)} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm hover:bg-muted transition-colors">
+                      <span className="font-medium">{p.name}</span>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    </a>
+                  ))}
+                  <p className="text-xs text-muted-foreground pt-1">Catho, Infojobs e Gupy abrem o portal para você criar a vaga manualmente. Use o "Texto formatado" para copiar a descrição.</p>
+                </TabsContent>
+                <TabsContent value="texto" className="pt-2 space-y-2">
+                  <pre className="rounded-lg bg-muted p-3 text-xs whitespace-pre-wrap break-words max-h-64 overflow-y-auto">{text}</pre>
+                  <Button size="sm" className="w-full" onClick={() => { navigator.clipboard.writeText(text); toast.success('Texto copiado!'); }}>
+                    <ClipboardCopy className="h-3.5 w-3.5 mr-2" /> Copiar texto
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!confirmVaga} onOpenChange={() => setConfirmVaga(null)}>
         <AlertDialogContent>
